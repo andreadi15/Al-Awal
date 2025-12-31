@@ -1,0 +1,627 @@
+import customtkinter as ctk
+from tkinter import messagebox
+import re
+from pages.peserta_model import PesertaModel
+from components import peserta_validator,create_entry,form_row,nik_entry,peserta_list_panel
+from config import SERTIFIKASI_OPTIONS,SKEMA_OPTIONS,PENDIDIKAN_OPTIONS
+
+class InputPesertaPage(ctk.CTkFrame):
+    def __init__(self, parent):
+        super().__init__(parent, fg_color="#2a2a2a")
+
+        
+        # List untuk menyimpan semua peserta
+        self.list_peserta = []
+        
+        # Index peserta saat ini (0-based)
+        self.current_index = 0
+        
+        self._build_layout()
+        self._build_container_data()
+        self._build_form()
+        self.refresh_UI_Form()
+    
+    def _build_layout(self):
+        # Container utama
+        self.main_container = ctk.CTkFrame(self, fg_color="#2a2a2a")
+        self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        # Header
+        header = ctk.CTkLabel(
+            self.main_container,
+            text="📝 INPUT DATA PESERTA",
+            font=("Arial", 28, "bold"),
+            text_color="#1a73e8"
+        )
+        header.pack(pady=(0, 10))
+        
+        # Form Container dengan scrollbar custom
+        self.form_container = ctk.CTkScrollableFrame(
+            self.main_container,
+            fg_color="#2a2a2a",
+            scrollbar_button_color="#888888",
+            scrollbar_button_hover_color="#666666"
+        )
+        self.form_container.pack(fill="both", expand=True)
+        
+    def _build_container_data(self):
+        # Container untuk data peserta yang sudah diinput (initially hidden)
+        self.data_container_wrapper = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        
+        # Header data container dengan delete all button
+        self.data_header = ctk.CTkFrame(self.data_container_wrapper, fg_color="transparent")
+        self.data_header.pack(fill="x", pady=(0, 5))
+        
+        data_label = ctk.CTkLabel(
+            self.data_header,
+            text="Data Peserta Tersimpan:",
+            font=("Arial", 14, "bold"),
+            text_color="#ffffff"
+        )
+        data_label.pack(side="left")
+        
+        delete_all_btn = ctk.CTkButton(
+            self.data_header,
+            text="🗑️ Delete All",
+            font=("Arial", 12, "bold"),
+            fg_color="#dc3545",
+            hover_color="#c82333",
+            height=30,
+            width=120,
+            corner_radius=8,
+            command=self.delete_all_data
+        )
+        delete_all_btn.pack(side="right")
+        
+        # Scrollable frame untuk button data peserta
+        self.data_scroll_frame = ctk.CTkScrollableFrame(
+            self.data_container_wrapper,
+            fg_color="#333333",
+            height=100,
+            scrollbar_button_color="#888888",
+            scrollbar_button_hover_color="#666666"
+        )
+        self.data_scroll_frame.pack(fill="x", pady=(0, 15))
+        
+        # Configure grid untuk data buttons
+        for i in range(10):  # 10 kolom
+            self.data_scroll_frame.grid_columnconfigure(i, weight=1, minsize=100)
+            
+    # =======================
+    # FORM
+    # =======================
+    def _build_form(self):
+        self.form_frame = ctk.CTkFrame(self.form_container, fg_color="#333333", corner_radius=15)
+        self.form_frame.pack(fill="both", expand=True, padx=50)
+        
+        # Form content dengan padding
+        form_content = ctk.CTkFrame(self.form_frame, fg_color="transparent")
+        form_content.pack(fill="both", expand=True, padx=40, pady=40)
+        
+        # Header row dengan Sertifikasi dan Counter
+        header_row = ctk.CTkFrame(form_content, fg_color="transparent")
+        header_row.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 20))
+        header_row.grid_columnconfigure(1, weight=1)
+        
+        self.entries = {}
+
+        # Sertifikasi combo box (kiri)
+        sertifikasi_label = ctk.CTkLabel(header_row, text="Sertifikasi:", font=("Arial", 14, "bold"), text_color="#ffffff")
+        sertifikasi_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
+        
+        self.entries["sertifikasi"] = create_entry(header_row, "combobox", options=SERTIFIKASI_OPTIONS, width=150)
+        self.entries["sertifikasi"].grid(row=0, column=1, sticky="w")
+        self.entries["sertifikasi"].set(self.sertifikasi_options[0])
+        
+        # Counter peserta (kanan)
+        self.counter_label = ctk.CTkLabel(
+            header_row,
+            text="Peserta #1",
+            font=("Arial", 16, "bold"),
+            text_color="#ffffff",
+            fg_color="#1a73e8",
+            corner_radius=8,
+            padx=20,
+            pady=5
+        )
+        self.counter_label.grid(row=0, column=2, sticky="e")
+        
+        # Row tracking
+        current_row = 1
+        
+        # 1. Skema (ComboBox)
+        self.entries["skema"] = form_row.FormRow(form_content, "combobox", options=SKEMA_OPTIONS)
+        form_row.FormRow(form_content, current_row, "Skema", self.entries["skema"])
+        current_row += 1
+        
+        # 2. Nama Lengkap
+        self.entries["nama"] = form_row.FormRow(form_content, "entry", placeholder="Masukkan nama lengkap")
+        form_row.FormRow(form_content, current_row, "Nama Lengkap", self.entries["nama"])
+        current_row += 1
+        
+        # 3. NIK (Custom dengan placeholder ─)   
+        self.entries["nik"] = nik_entry(
+            form_content, 
+            font=("Arial", 13), 
+            height=40, 
+            corner_radius=8, 
+            fg_color="#2a2a2a", 
+            border_color="#1a73e8", 
+            placeholder="")
+        
+        form_row.FormRow(form_content, current_row, "NIK", self.entries["nik"])
+        current_row += 1
+        
+        # 4. Tempat Lahir
+        self.entries["tempat_lahir"] = form_row.FormRow(form_content, "entry", placeholder="Tempat lahir")
+        form_row.FormRow(form_content, current_row, "Tempat Lahir", self.entries["tempat_lahir"])
+        current_row += 1
+        
+        # 5. Tanggal Lahir (dengan auto-format)
+        self.entries["tanggal_lahir"] = form_row.FormRow(form_content, "entry", placeholder="DD-MM-YYYY")
+        form_row.FormRow(form_content,current_row,"Tanggal Lahir",self.entries["tanggal_lahir"])
+        self.entries["tanggal_lahir"].bind("<KeyRelease>", self.format_tanggal_lahir)
+        current_row += 1
+        
+        # 6. Alamat (Text area)
+        self.entries["alamat"] = form_row.FormRow(form_content, "textbox", placeholder="Alamat lengkap")
+        form_row.FormRow(form_content, current_row, "Alamat", self.entries["alamat"])
+        current_row += 1
+        
+        # 7. Kelurahan
+        self.entries["kelurahan"] = form_row.FormRow(form_content, "entry", placeholder="Nama kelurahan")
+        form_row.FormRow(form_content, current_row, "Kelurahan", self.entries["kelurahan"])
+        current_row += 1
+        
+        # 8. Kecamatan
+        self.entries["kecamatan"] = form_row.FormRow(form_content, "entry", placeholder="Nama kecamatan")
+        form_row.FormRow(form_content, current_row, "Kecamatan", self.entries["kecamatan"])
+        current_row += 1
+        
+        # 9. Kabupaten
+        self.entries["kabupaten"] = create_entry(form_content, "entry", placeholder="Nama kabupaten/kota")
+        form_row.FormRow(form_content, current_row, "Kabupaten", self.entries["kabupaten"])
+        current_row += 1
+        
+        # 10. Provinsi
+        self.entries["provinsi"] = create_entry(form_content,"entry", placeholder="Nama provinsi")
+        form_row.FormRow(form_content, current_row, "Provinsi", self.entries["provinsi"])
+        current_row += 1
+        
+        # 11. No. Telepon
+        self.entries["telepon"] = create_entry(form_content, "entry",placeholder="08xxxxxxxxxx")
+        form_row.FormRow(form_content, current_row, "No. Telepon", self.entries["telepon"])
+        current_row += 1
+        
+        # 12. Pendidikan Terakhir
+        self.entries["pendidikan"] = form_row.FormRow(form_content, "combobox",options=PENDIDIKAN_OPTIONS)
+        form_row.FormRow(form_content, current_row, "Pendidikan Terakhir", self.entries["pendidikan"])
+        current_row += 1
+        
+        # Reset button (di bawah pendidikan terakhir)
+        reset_frame = ctk.CTkFrame(form_content, fg_color="transparent")
+        reset_frame.grid(row=current_row, column=0, columnspan=2, sticky="e", pady=(10, 20))
+        
+        reset_link = ctk.CTkLabel(
+            reset_frame,
+            text="🔄 Reset Form",
+            font=("Arial", 13, "underline"),
+            text_color="#ff051e",
+            cursor="hand2"
+        )
+        reset_link.pack()
+        reset_link.bind("<Button-1>", lambda e: self.reset_form())
+        
+        current_row += 1
+        
+        # Button Container dengan grid layout
+        button_frame = ctk.CTkFrame(form_content, fg_color="transparent")
+        button_frame.grid(row=current_row, column=0, columnspan=2, sticky="ew", pady=(10, 10))
+        
+        self.prev_btn = ctk.CTkButton(
+            button_frame,
+            text="⬅️ Prev",
+            font=("Arial", 16, "bold"),
+            fg_color="#6c757d",
+            hover_color="#5a6268",
+            height=50,
+            corner_radius=10,
+            command=self.previous_peserta
+        )
+        # Tombol Save (di tengah, col 1)
+        self.save_btn = ctk.CTkButton(
+            # button_frame,
+            text="💾 Save",
+            font=("Arial", 16, "bold"),
+            fg_color="#1a73e8",
+            hover_color="#1557b0",
+            height=50,
+            corner_radius=10,
+            command=self.save_all_data
+        )
+        self.save_btn.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        
+        # Tombol Next (di kanan, col 2)
+        self.next_btn = ctk.CTkButton(
+            button_frame,
+            text="Next ➡️",
+            font=("Arial", 16, "bold"),
+            fg_color="#28a745",
+            hover_color="#218838",
+            height=50,
+            corner_radius=10,
+            command=self.next_peserta
+        )
+        self.next_btn.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+        
+        
+        # Configure grid untuk responsive buttons (3 kolom)
+        for i in range(3):
+            button_frame.grid_columnconfigure(i, weight=1, uniform="buttons")
+        
+    def format_tanggal_lahir(self, event):
+        """Auto-format tanggal lahir: DD-MM-YYYY"""
+        entry = event.widget
+        text = entry.get()
+        
+        # Hapus semua karakter non-digit
+        digits = re.sub(r'\D', '', text)
+        
+        # Batasi maksimal 8 digit
+        digits = digits[:8]
+        
+        # Format dengan strip
+        formatted = ""
+        for i, digit in enumerate(digits):
+            if i == 2 or i == 4:
+                formatted += "-"
+            formatted += digit
+        
+        # Update entry jika berbeda
+        if formatted != text:
+            cursor_pos = entry.index("insert")
+            entry.delete(0, "end")
+            entry.insert(0, formatted)
+            if len(formatted) > len(text):
+                cursor_pos += 1
+            entry.icursor(cursor_pos)
+
+    # =======================
+    # LOGIC
+    # =======================
+    def collect_form(self):
+        """Ambil data dari form saat ini"""        
+        return PesertaModel(
+            sertifikasi=self.entries["sertifikasi"].get(),
+            skema=self.entries["skema"].get(),
+            nama=self.entries["nama"].get(),
+            nik=self.entries["nik"].get_value(),
+            tempat_lahir=self.entries["tempat_lahir"].get(),
+            tanggal_lahir=self.entries["tanggal_lahir"].get(),
+            alamat=self.entries["alamat"].get(),
+            kelurahan=self.entries["kelurahan"].get(),
+            kecamatan=self.entries["kecamatan"].get(),
+            kabupaten=self.entries["kabupaten"].get(),
+            provinsi=self.entries["provinsi"].get(),
+            telepon=self.entries["telepon"].get(),
+            pendidikan=self.entries["pendidikan"].get()
+        )
+ 
+    def load_form(self, peserta: PesertaModel):
+        """Load data peserta ke form"""
+        self.entries["sertifikasi"].set(peserta.sertifikasi)
+        self.entries["skema"].set(peserta.skema)
+        
+        self.entries["nama"].delete(0, "end")
+        self.entries["nama"].insert(0, peserta.nama)
+        
+        self.entries["nik"]._value = peserta.nik
+        self.entries["nik"].delete(0, "end")
+        self.entries["nik"].insert(0, self.entries["nik"]._format())
+        
+        self.entries["tempat_lahir"].delete(0, "end")
+        self.entries["tempat_lahir"].insert(0, peserta.tempat_lahir)
+        
+        self.entries["tanggal_lahir"].delete(0, "end")
+        self.entries["tanggal_lahir"].insert(0, peserta.tanggal_lahir)
+        
+        self.entries["alamat"].delete("1.0", "end")
+        self.entries["alamat"].insert("1.0", peserta.alamat)
+        
+        self.entries["kelurahan"].delete(0, "end")
+        self.entries["kelurahan"].insert(0, peserta.kelurahan)
+        
+        self.entries["kecamatan"].delete(0, "end")
+        self.entries["kecamatan"].insert(0, peserta.kecamatan)
+        
+        self.entries["kabupaten"].delete(0, "end")
+        self.entries["kabupaten"].insert(0, peserta.kabupaten)
+        
+        self.entries["provinsi"].delete(0, "end")
+        self.entries["provinsi"].insert(0, peserta.provinsi)
+        
+        self.entries["telepon"].delete(0, "end")
+        self.entries["telepon"].insert(0, peserta.telepon)
+        
+        self.entries["pendidikan"].set(peserta.pendidikan)
+    
+    def next_peserta(self):
+        """Pindah ke peserta selanjutnya"""
+        # Validasi form saat ini
+        peserta = self.collect_form()
+        errors = peserta_validator.PesertaValidator.validate(peserta)
+     
+        if errors:
+            messagebox.showerror(
+                "Validasi Error",
+                "Harap perbaiki kesalahan berikut:\n\n" + "\n".join(f"• {e}" for e in errors)
+            )
+            return
+        
+        # Update atau tambah ke list
+        if self.current_index < len(self.list_peserta):
+            self.list_peserta[self.current_index] = peserta
+        else:
+            self.list_peserta.append(peserta)
+        
+        # Show data container jika belum terlihat
+        if len(self.list_peserta) > 0 and not self.data_container_wrapper.winfo_ismapped():
+            self.data_container_wrapper.pack(fill="x", pady=(0, 15), before=self.winfo_children()[1])
+        
+        # Pindah ke index selanjutnya
+        self.current_index = len(self.list_peserta)
+        
+        # Load data peserta berikutnya jika ada, atau reset form
+        if self.current_index < len(self.list_peserta):
+            self.load_form(self.list_peserta[self.current_index])
+        else:
+            self.clear_form()
+        
+        # Update UI
+        self.refresh_UI_Form()
+    
+    def previous_peserta(self):
+        """Kembali ke peserta sebelumnya"""
+        if self.current_index > 0:
+            # Simpan data saat ini jika ada isinya
+            if (
+                self.entries["nik"].get().strip() or
+                self.entries["tempat_lahir"].get().strip() or
+                self.entries["tanggal_lahir"].get().strip() or
+                self.entries["alamat"].get().strip() or
+                self.entries["kelurahan"].get().strip() or
+                self.entries["kecamatan"].get().strip() or
+                self.entries["kabupaten"].get().strip() or
+                self.entries["provinsi"].get().strip() or
+                self.entries["telepon"].get().strip() or
+                self.entries["instansi"].get().strip()
+            ):
+                peserta = self.collect_form()
+                if self.current_index < len(self.list_peserta):
+                    self.list_peserta[self.current_index] = peserta
+                else:
+                    self.list_peserta.append(peserta)
+            
+            # Pindah ke index sebelumnya
+            self.current_index -= 1
+            
+            # Load data peserta sebelumnya
+            self.load_form(self.list_peserta[self.current_index])
+            
+            # Update UI
+            self.refresh_UI_Form()
+    
+    
+    def clear_form(self):
+        for key, widget in self.entries.items():
+            if isinstance(widget, nik_entry):
+                widget._value = ""
+                widget.delete(0, "end")
+                widget.insert(0, widget._format())
+            elif isinstance(widget, ctk.CTkComboBox):
+                widget.set("")
+            else:
+                widget.delete(0, "end")
+    
+    def refresh_UI_Form(self):
+        """Update label counter peserta"""
+        self.counter_label.configure(text=f"Peserta #{self.current_index + 1}")
+        
+        """Update state tombol navigasi"""
+        # Tombol prev hanya aktif jika bukan peserta pertama
+        if self.current_index > 0:
+            self.prev_btn.configure(state="normal")
+        else:
+            self.prev_btn.configure(state="disabled")
+            
+        """Update state sertifikasi combo box"""
+        if len(self.list_peserta) > 1:
+            # Disable combo box, jadikan readonly
+            self.sertifikasi_combo.configure(state="disabled")
+        else:
+            # Enable combo box
+            self.sertifikasi_combo.configure(state="normal")
+    
+        """Update button data peserta di container"""
+        # Hapus semua button lama
+        for widget in self.data_scroll_frame.winfo_children():
+            widget.destroy()
+        
+        # Buat button untuk setiap peserta
+        row = 0
+        col = 0
+        for idx, peserta in enumerate(self.list_peserta):
+            # Container untuk button + delete
+            btn_container = ctk.CTkFrame(self.data_scroll_frame, fg_color="transparent")
+            btn_container.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
+            
+            # Button data peserta
+            btn = ctk.CTkButton(
+                btn_container,
+                text=f"#{idx + 1}",
+                font=("Arial", 14, "bold"),
+                fg_color="#1a73e8" if idx == self.current_index else "#555555",
+                hover_color="#1557b0" if idx == self.current_index else "#666666",
+                height=40,
+                width=70,
+                corner_radius=8,
+                command=lambda i=idx: self.jump_to_peserta(i)
+            )
+            btn.pack(side="left", expand=True, fill="x")
+            
+            # Delete button
+            del_btn = ctk.CTkButton(
+                btn_container,
+                text="✕",
+                font=("Arial", 12, "bold"),
+                fg_color="#dc3545",
+                hover_color="#c82333",
+                height=40,
+                width=30,
+                corner_radius=8,
+                command=lambda i=idx: self.delete_peserta(i)
+            )
+            del_btn.pack(side="right", padx=(5, 0))
+            
+            # Update grid position
+            col += 1
+            if col >= 10:
+                col = 0
+                row += 1
+    
+    def jump_to_peserta(self, index):
+        """Jump ke peserta tertentu"""
+        # Simpan data saat ini dulu
+        if (
+                self.entries["nik"].get().strip() or
+                self.entries["tempat_lahir"].get().strip() or
+                self.entries["tanggal_lahir"].get().strip() or
+                self.entries["alamat"].get().strip() or
+                self.entries["kelurahan"].get().strip() or
+                self.entries["kecamatan"].get().strip() or
+                self.entries["kabupaten"].get().strip() or
+                self.entries["provinsi"].get().strip() or
+                self.entries["telepon"].get().strip() or
+                self.entries["instansi"].get().strip()
+            ):
+            peserta = self.collect_form()
+            if self.current_index < len(self.list_peserta):
+                self.list_peserta[self.current_index] = peserta
+        
+        # Pindah ke index yang dipilih
+        self.current_index = index
+        self.load_form(self.list_peserta[self.current_index])
+        
+        # Update UI
+        self.refresh_UI_Form()
+    
+    def delete_peserta(self, index):
+        """Hapus peserta tertentu"""
+        if messagebox.askyesno("Konfirmasi", f"Hapus data peserta #{index + 1}?"):
+            self.list_peserta.pop(index)
+            
+            # Adjust current index
+            if self.current_index >= len(self.list_peserta):
+                self.current_index = max(0, len(self.list_peserta) - 1)
+            
+            # Load data atau reset
+            if len(self.list_peserta) > 0:
+                self.load_form(self.list_peserta[self.current_index])
+            else:
+                self.clear_form()
+                self.current_index = 0
+                # Hide data container
+                self.data_container_wrapper.pack_forget()
+            
+            # Update UI
+            self.refresh_UI_Form()
+    
+    def delete_all_data(self):
+        """Hapus semua data peserta"""
+        if len(self.list_peserta) == 0:
+            messagebox.showinfo("Info", "Tidak ada data untuk dihapus")
+            return
+        
+        if messagebox.askyesno("Konfirmasi", f"Hapus semua {len(self.list_peserta)} data peserta?"):
+            self.list_peserta = []
+            self.current_index = 0
+            self.clear_form()
+            
+            # Hide data container
+            self.data_container_wrapper.pack_forget()
+            
+            # Update UI
+            self.refresh_UI_Form()
+    
+    def save_all_data(self):
+        """Simpan semua data peserta"""
+        # Validasi form saat ini terlebih dahulu
+        errors = self.validate_current_form()
+        if errors:
+            messagebox.showerror(
+                "Validasi Error",
+                "Harap perbaiki kesalahan berikut:\n\n" + "\n".join(f"• {e}" for e in errors)
+            )
+            return
+        
+        # Simpan peserta terakhir
+        peserta = self.collect_form()
+        if self.current_index < len(self.list_peserta):
+            self.list_peserta[self.current_index] = peserta
+        else:
+            self.list_peserta.append(peserta)
+        
+        # Cek apakah ada peserta yang akan disimpan
+        if len(self.list_peserta) == 0:
+            messagebox.showwarning(
+                "Peringatan",
+                "Tidak ada data peserta untuk disimpan!"
+            )
+            return
+        
+        # Panggil fungsi simpan
+        self.simpan_peserta(self.list_peserta)
+        
+        messagebox.showinfo(
+            "Sukses",
+            f"Berhasil menyimpan {len(self.list_peserta)} peserta!"
+        )
+        
+        # Reset semua setelah simpan
+        self.list_peserta = []
+        self.current_index = 0
+        self.clear_form()
+        self.data_container_wrapper.pack_forget()
+        self.refresh_UI_Form()
+    
+    def simpan_peserta(self, list_peserta):
+        """
+        Fungsi untuk menyimpan semua peserta
+        Parameter: list_peserta (List[PesertaModel])
+        """
+        print("=" * 50)
+        print("MENYIMPAN DATA PESERTA")
+        print("=" * 50)
+        
+        for i, peserta in enumerate(list_peserta, start=1):
+            print(f"\nPeserta #{i}:")
+            print(f"  Sertifikasi: {peserta.sertifikasi}")
+            print(f"  Skema: {peserta.skema}")
+            print(f"  Nama: {peserta.nama}")
+            print(f"  NIK: {peserta.nik}")
+            print(f"  Tempat Lahir: {peserta.tempat_lahir}")
+            print(f"  Tanggal Lahir: {peserta.tanggal_lahir}")
+            print(f"  Alamat: {peserta.alamat}")
+            print(f"  Kelurahan: {peserta.kelurahan}")
+            print(f"  Kecamatan: {peserta.kecamatan}")
+            print(f"  Kabupaten: {peserta.kabupaten}")
+            print(f"  Provinsi: {peserta.provinsi}")
+            print(f"  Telepon: {peserta.telepon}")
+            print(f"  Pendidikan: {peserta.pendidikan}")
+            print(f"  Instansi: {peserta.Instansi}")
+        
+        print("\n" + "=" * 50)
+        print(f"Total: {len(list_peserta)} peserta")
+        print("=" * 50)
+        
+        # TODO: Implementasi penyimpanan ke database atau file
+        pass
