@@ -9,12 +9,16 @@ class InputPesertaPage(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent, fg_color="#2a2a2a")
 
-        
+        self.entries = {}
+        self.error_labels = {}
         # List untuk menyimpan semua peserta
         self.list_peserta = []
         
         # Index peserta saat ini (0-based)
         self.current_index = 0
+        
+        self.DEFAULT_BORDER_COLOR = "#1a73e8"
+        self.ERROR_BORDER_COLOR = "#ff4d4f"
         
         self._build_layout()
         self._build_container_data()
@@ -23,23 +27,25 @@ class InputPesertaPage(ctk.CTkFrame):
     
     def _build_layout(self):
         # Container utama
-        self.main_container = ctk.CTkFrame(self, fg_color="#2a2a2a")
+        self.main_container = ctk.CTkScrollableFrame(
+            self, 
+            fg_color="#2a2a2a",
+            scrollbar_button_color="#888888",
+            scrollbar_button_hover_color="#666666")
         self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
         # Header
-        header = ctk.CTkLabel(
+        self.header_label = ctk.CTkLabel(
             self.main_container,
             text="📝 INPUT DATA PESERTA",
             font=("Arial", 28, "bold"),
             text_color="#1a73e8"
         )
-        header.pack(pady=(0, 10))
+        self.header_label.pack(pady=(0, 10))
         
         # Form Container dengan scrollbar custom
-        self.form_container = ctk.CTkScrollableFrame(
+        self.form_container = ctk.CTkFrame(
             self.main_container,
-            fg_color="#2a2a2a",
-            scrollbar_button_color="#888888",
-            scrollbar_button_hover_color="#666666"
+            fg_color="#2a2a2a"
         )
         self.form_container.pack(fill="both", expand=True)
         
@@ -102,15 +108,14 @@ class InputPesertaPage(ctk.CTkFrame):
         header_row.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 20))
         header_row.grid_columnconfigure(1, weight=1)
         
-        self.entries = {}
-
         # Sertifikasi combo box (kiri)
         sertifikasi_label = ctk.CTkLabel(header_row, text="Sertifikasi:", font=("Arial", 14, "bold"), text_color="#ffffff")
         sertifikasi_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
         
-        self.entries["sertifikasi"] = create_entry(header_row, "combobox", options=SERTIFIKASI_OPTIONS, width=150)
+        entry = create_entry.createEntry(header_row, "combobox", options=SERTIFIKASI_OPTIONS, width=150)
+        self.entries["sertifikasi"] = entry.widget
         self.entries["sertifikasi"].grid(row=0, column=1, sticky="w")
-        self.entries["sertifikasi"].set(self.sertifikasi_options[0])
+        self.entries["sertifikasi"].set(SERTIFIKASI_OPTIONS[0])
         
         # Counter peserta (kanan)
         self.counter_label = ctk.CTkLabel(
@@ -129,73 +134,83 @@ class InputPesertaPage(ctk.CTkFrame):
         current_row = 1
         
         # 1. Skema (ComboBox)
-        self.entries["skema"] = form_row.FormRow(form_content, "combobox", options=SKEMA_OPTIONS)
+        entry = create_entry.createEntry(form_content, "combobox", options=SKEMA_OPTIONS)
+        self.entries["skema"] = entry.widget
         form_row.FormRow(form_content, current_row, "Skema", self.entries["skema"])
-        current_row += 1
+        current_row += 2
         
         # 2. Nama Lengkap
-        self.entries["nama"] = form_row.FormRow(form_content, "entry", placeholder="Masukkan nama lengkap")
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Masukkan nama lengkap")
+        self.entries["nama"] = entry.widget
         form_row.FormRow(form_content, current_row, "Nama Lengkap", self.entries["nama"])
-        current_row += 1
+        current_row += 2
         
         # 3. NIK (Custom dengan placeholder ─)   
-        self.entries["nik"] = nik_entry(
-            form_content, 
-            font=("Arial", 13), 
-            height=40, 
-            corner_radius=8, 
-            fg_color="#2a2a2a", 
-            border_color="#1a73e8", 
-            placeholder="")
-        
+        entry = create_entry.createEntry(form_content, "nik", placeholder="")
+        self.entries["nik"] = entry.widget
         form_row.FormRow(form_content, current_row, "NIK", self.entries["nik"])
-        current_row += 1
+        current_row += 2
         
         # 4. Tempat Lahir
-        self.entries["tempat_lahir"] = form_row.FormRow(form_content, "entry", placeholder="Tempat lahir")
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Tempat lahir")
+        self.entries["tempat_lahir"] = entry.widget
         form_row.FormRow(form_content, current_row, "Tempat Lahir", self.entries["tempat_lahir"])
-        current_row += 1
+        current_row += 2
         
         # 5. Tanggal Lahir (dengan auto-format)
-        self.entries["tanggal_lahir"] = form_row.FormRow(form_content, "entry", placeholder="DD-MM-YYYY")
+        entry = create_entry.createEntry(form_content, "entry", placeholder="DD-MM-YYYY")
+        self.entries["tanggal_lahir"] = entry.widget
         form_row.FormRow(form_content,current_row,"Tanggal Lahir",self.entries["tanggal_lahir"])
         self.entries["tanggal_lahir"].bind("<KeyRelease>", self.format_tanggal_lahir)
-        current_row += 1
+        current_row += 2
         
         # 6. Alamat (Text area)
-        self.entries["alamat"] = form_row.FormRow(form_content, "textbox", placeholder="Alamat lengkap")
+        entry = create_entry.createEntry(form_content, "textbox", placeholder="Alamat lengkap")
+        self.entries["alamat"] = entry.widget
         form_row.FormRow(form_content, current_row, "Alamat", self.entries["alamat"])
-        current_row += 1
+        current_row += 2
         
         # 7. Kelurahan
-        self.entries["kelurahan"] = form_row.FormRow(form_content, "entry", placeholder="Nama kelurahan")
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama kelurahan")
+        self.entries["kelurahan"] = entry.widget
         form_row.FormRow(form_content, current_row, "Kelurahan", self.entries["kelurahan"])
-        current_row += 1
+        current_row += 2
         
         # 8. Kecamatan
-        self.entries["kecamatan"] = form_row.FormRow(form_content, "entry", placeholder="Nama kecamatan")
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama kecamatan")
+        self.entries["kecamatan"] = entry.widget
         form_row.FormRow(form_content, current_row, "Kecamatan", self.entries["kecamatan"])
-        current_row += 1
+        current_row += 2
         
         # 9. Kabupaten
-        self.entries["kabupaten"] = create_entry(form_content, "entry", placeholder="Nama kabupaten/kota")
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama kabupaten/kota")
+        self.entries["kabupaten"] = entry.widget
         form_row.FormRow(form_content, current_row, "Kabupaten", self.entries["kabupaten"])
-        current_row += 1
+        current_row += 2
         
         # 10. Provinsi
-        self.entries["provinsi"] = create_entry(form_content,"entry", placeholder="Nama provinsi")
+        entry = create_entry.createEntry(form_content,"entry", placeholder="Nama provinsi")
+        self.entries["provinsi"] = entry.widget
         form_row.FormRow(form_content, current_row, "Provinsi", self.entries["provinsi"])
-        current_row += 1
+        current_row += 2
         
         # 11. No. Telepon
-        self.entries["telepon"] = create_entry(form_content, "entry",placeholder="08xxxxxxxxxx")
+        entry = create_entry.createEntry(form_content, "entry",placeholder="08xxxxxxxxxx")
+        self.entries["telepon"] = entry.widget
         form_row.FormRow(form_content, current_row, "No. Telepon", self.entries["telepon"])
-        current_row += 1
+        current_row += 2
         
         # 12. Pendidikan Terakhir
-        self.entries["pendidikan"] = form_row.FormRow(form_content, "combobox",options=PENDIDIKAN_OPTIONS)
+        entry = create_entry.createEntry(form_content, "combobox",options=PENDIDIKAN_OPTIONS)
+        self.entries["pendidikan"] = entry.widget
         form_row.FormRow(form_content, current_row, "Pendidikan Terakhir", self.entries["pendidikan"])
-        current_row += 1
+        current_row += 2
+        
+        # 13. Instansi
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama Instansi")
+        self.entries["instansi"] = entry.widget
+        form_row.FormRow(form_content, current_row, "Instansi", self.entries["instansi"])
+        current_row += 2
         
         # Reset button (di bawah pendidikan terakhir)
         reset_frame = ctk.CTkFrame(form_content, fg_color="transparent")
@@ -229,7 +244,7 @@ class InputPesertaPage(ctk.CTkFrame):
         )
         # Tombol Save (di tengah, col 1)
         self.save_btn = ctk.CTkButton(
-            # button_frame,
+            button_frame,
             text="💾 Save",
             font=("Arial", 16, "bold"),
             fg_color="#1a73e8",
@@ -297,13 +312,14 @@ class InputPesertaPage(ctk.CTkFrame):
             nik=self.entries["nik"].get_value(),
             tempat_lahir=self.entries["tempat_lahir"].get(),
             tanggal_lahir=self.entries["tanggal_lahir"].get(),
-            alamat=self.entries["alamat"].get(),
+            alamat=self.entries["alamat"].get("1.0","end"),
             kelurahan=self.entries["kelurahan"].get(),
             kecamatan=self.entries["kecamatan"].get(),
             kabupaten=self.entries["kabupaten"].get(),
             provinsi=self.entries["provinsi"].get(),
             telepon=self.entries["telepon"].get(),
-            pendidikan=self.entries["pendidikan"].get()
+            pendidikan=self.entries["pendidikan"].get(),
+            instansi=self.entries["instansi"].get()
         )
  
     def load_form(self, peserta: PesertaModel):
@@ -343,6 +359,9 @@ class InputPesertaPage(ctk.CTkFrame):
         self.entries["telepon"].insert(0, peserta.telepon)
         
         self.entries["pendidikan"].set(peserta.pendidikan)
+        
+        self.entries["instansi"].delete(0, "end")
+        self.entries["telepinstansion"].insert(0, peserta.instansi)
     
     def next_peserta(self):
         """Pindah ke peserta selanjutnya"""
@@ -365,7 +384,7 @@ class InputPesertaPage(ctk.CTkFrame):
         
         # Show data container jika belum terlihat
         if len(self.list_peserta) > 0 and not self.data_container_wrapper.winfo_ismapped():
-            self.data_container_wrapper.pack(fill="x", pady=(0, 15), before=self.winfo_children()[1])
+            self.data_container_wrapper.pack(fill="x", pady=(0, 15), after=self.header_label)
         
         # Pindah ke index selanjutnya
         self.current_index = len(self.list_peserta)
@@ -409,18 +428,30 @@ class InputPesertaPage(ctk.CTkFrame):
             
             # Update UI
             self.refresh_UI_Form()
-    
-    
+       
     def clear_form(self):
         for key, widget in self.entries.items():
-            if isinstance(widget, nik_entry):
+
+            # 1. NikEntry
+            if isinstance(widget, nik_entry.NikEntry):
                 widget._value = ""
                 widget.delete(0, "end")
                 widget.insert(0, widget._format())
+
+            # 2. ComboBox
             elif isinstance(widget, ctk.CTkComboBox):
                 widget.set("")
+
+            # 3. TextBox
+            elif isinstance(widget, ctk.CTkTextbox):
+                widget.delete("1.0", "end")
+
+            # 4. Entry biasa
             else:
-                widget.delete(0, "end")
+                try:
+                    widget.delete(0, "end")
+                except Exception:
+                    pass
     
     def refresh_UI_Form(self):
         """Update label counter peserta"""
@@ -439,7 +470,7 @@ class InputPesertaPage(ctk.CTkFrame):
             self.sertifikasi_combo.configure(state="disabled")
         else:
             # Enable combo box
-            self.sertifikasi_combo.configure(state="normal")
+            self.entries["sertifikasi"].configure(state="normal")
     
         """Update button data peserta di container"""
         # Hapus semua button lama
