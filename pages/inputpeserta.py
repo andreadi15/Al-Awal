@@ -15,7 +15,7 @@ class InputPesertaPage(ctk.CTkFrame):
         self.list_peserta = []
         
         # Index peserta saat ini (0-based)
-        self.current_index = 0
+        self.current_index = 0  
         
         self.DEFAULT_BORDER_COLOR = "#1a73e8"
         self.ERROR_BORDER_COLOR = "#ff4d4f"
@@ -33,6 +33,9 @@ class InputPesertaPage(ctk.CTkFrame):
             scrollbar_button_color="#888888",
             scrollbar_button_hover_color="#666666")
         self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        self.main_container.bind_all("<MouseWheel>", self._on_mousewheel)
+
+        
         # Header
         self.header_label = ctk.CTkLabel(
             self.main_container,
@@ -42,7 +45,6 @@ class InputPesertaPage(ctk.CTkFrame):
         )
         self.header_label.pack(pady=(0, 10))
         
-        # Form Container dengan scrollbar custom
         self.form_container = ctk.CTkFrame(
             self.main_container,
             fg_color="#2a2a2a"
@@ -161,7 +163,7 @@ class InputPesertaPage(ctk.CTkFrame):
         entry = create_entry.createEntry(form_content, "entry", placeholder="DD-MM-YYYY")
         self.entries["tanggal_lahir"] = entry.widget
         form_row.FormRow(form_content,current_row,"Tanggal Lahir",self.entries["tanggal_lahir"])
-        self.entries["tanggal_lahir"].bind("<KeyRelease>", self.format_tanggal_lahir)
+        self.entries["tanggal_lahir"].bind("<KeyPress>", self.format_tanggal_lahir)
         current_row += 2
         
         # 6. Alamat (Text area)
@@ -198,6 +200,7 @@ class InputPesertaPage(ctk.CTkFrame):
         entry = create_entry.createEntry(form_content, "entry",placeholder="08xxxxxxxxxx")
         self.entries["telepon"] = entry.widget
         form_row.FormRow(form_content, current_row, "No. Telepon", self.entries["telepon"])
+        self.entries["telepon"].bind("<KeyPress>", self.format_no_telepon)
         current_row += 2
         
         # 12. Pendidikan Terakhir
@@ -212,6 +215,9 @@ class InputPesertaPage(ctk.CTkFrame):
         form_row.FormRow(form_content, current_row, "Instansi", self.entries["instansi"])
         current_row += 2
         
+        for w in self.entries.values():
+            w.bind("<FocusIn>", lambda e, widget=w: self.scroll_to_widget(widget))
+        
         # Reset button (di bawah pendidikan terakhir)
         reset_frame = ctk.CTkFrame(form_content, fg_color="transparent")
         reset_frame.grid(row=current_row, column=0, columnspan=2, sticky="e", pady=(10, 20))
@@ -224,7 +230,7 @@ class InputPesertaPage(ctk.CTkFrame):
             cursor="hand2"
         )
         reset_link.pack()
-        reset_link.bind("<Button-1>", lambda e: self.reset_form())
+        reset_link.bind("<Button-1>", lambda e: self.clear_form())
         
         current_row += 1
         
@@ -242,6 +248,8 @@ class InputPesertaPage(ctk.CTkFrame):
             corner_radius=10,
             command=self.previous_peserta
         )
+        self.prev_btn.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        
         # Tombol Save (di tengah, col 1)
         self.save_btn = ctk.CTkButton(
             button_frame,
@@ -253,7 +261,7 @@ class InputPesertaPage(ctk.CTkFrame):
             corner_radius=10,
             command=self.save_all_data
         )
-        self.save_btn.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        self.save_btn.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
         
         # Tombol Next (di kanan, col 2)
         self.next_btn = ctk.CTkButton(
@@ -266,43 +274,146 @@ class InputPesertaPage(ctk.CTkFrame):
             corner_radius=10,
             command=self.next_peserta
         )
-        self.next_btn.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+        self.next_btn.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
         
         
         # Configure grid untuk responsive buttons (3 kolom)
         for i in range(3):
             button_frame.grid_columnconfigure(i, weight=1, uniform="buttons")
         
-    def format_tanggal_lahir(self, event):
-        """Auto-format tanggal lahir: DD-MM-YYYY"""
-        entry = event.widget
-        text = entry.get()
+    # def format_tanggal_lahir(self, event):
+    #     """Auto-format tanggal lahir: DD-MM-YYYY"""
+    #     entry = event.widget
+    #     text = entry.get()
         
-        # Hapus semua karakter non-digit
-        digits = re.sub(r'\D', '', text)
+    #     # Hapus semua karakter non-digit
+    #     digits = re.sub(r'\D', '', text)
         
-        # Batasi maksimal 8 digit
-        digits = digits[:8]
+    #     # Batasi maksimal 8 digit
+    #     digits = digits[:8]
         
-        # Format dengan strip
-        formatted = ""
-        for i, digit in enumerate(digits):
-            if i == 2 or i == 4:
-                formatted += "-"
-            formatted += digit
+    #     # Format dengan strip
+    #     formatted = ""
+    #     for i, digit in enumerate(digits):
+    #         if i == 2 or i == 4:
+    #             formatted += "-"
+    #         formatted += digit
         
-        # Update entry jika berbeda
-        if formatted != text:
-            cursor_pos = entry.index("insert")
-            entry.delete(0, "end")
-            entry.insert(0, formatted)
-            if len(formatted) > len(text):
-                cursor_pos += 1
-            entry.icursor(cursor_pos)
+    #     # Update entry jika berbeda
+    #     if formatted != text:
+    #         cursor_pos = entry.index("insert")
+    #         entry.delete(0, "end")
+    #         entry.insert(0, formatted)
+    #         if len(formatted) > len(text):
+    #             cursor_pos += 1
+    #         entry.icursor(cursor_pos)
 
     # =======================
     # LOGIC
     # =======================
+    def format_tanggal_lahir(self, event):
+        """Handler untuk input tanggal lahir - KeyPress"""
+        entry = event.widget
+        current_text = entry.get()
+        
+        # Ambil hanya digit dari text saat ini
+        current_digits = re.sub(r'\D', '', current_text)
+        
+        # Handle Backspace
+        if event.keysym == "BackSpace":
+            if len(current_digits) > 0:
+                current_digits = current_digits[:-1]
+            else:
+                return "break"
+        # Handle input digit
+        elif event.char.isdigit():
+            # Cek apakah sudah mencapai batas 8 digit
+            if len(current_digits) >= 8:
+                return "break"
+            current_digits += event.char
+        else:
+            # Karakter selain digit atau backspace, block
+            return "break"
+        
+        # Format dengan strip: DD-MM-YYYY
+        formatted = ""
+        for i, digit in enumerate(current_digits):
+            if i == 2 or i == 4:
+                formatted += "-"
+            formatted += digit
+        
+        # Update entry
+        entry.delete(0, "end")
+        entry.insert(0, formatted)
+        
+        return "break"
+    
+    def format_no_telepon(self, event):
+        """Handler untuk input telepon - hanya angka"""
+        entry = event.widget
+        current_text = entry.get()
+        
+        # Handle Backspace
+        if event.keysym == "BackSpace":
+            return  # Allow backspace
+        # Hanya izinkan digit
+        elif event.char.isdigit():
+            return  # Allow digit
+        else:
+            # Block karakter selain digit
+            return "break"
+        
+    def _on_mousewheel(self, event):
+        # scroll lebih cepat  (angka 2 bisa jadi 3, 4, 5 sesuai rasa)
+        self.main_container._parent_canvas.yview_scroll(
+            int(-1 * (event.delta/120) * 50),  # scroll multiplier 3x
+            "units")
+        
+    def scroll_to_widget(self, widget):
+        """Scroll otomatis ke widget saat mendapat focus"""
+        try:
+            # Pastikan semua widget sudah terupdate
+            widget.update_idletasks()
+            self.main_container.update_idletasks()
+            
+            # Dapatkan canvas dari scrollable frame
+            canvas = self.main_container._parent_canvas
+            
+            # Dapatkan posisi widget relatif terhadap form_frame
+            widget_y = widget.winfo_rooty() - self.form_frame.winfo_rooty()
+            
+            # Dapatkan tinggi viewport (area yang terlihat)
+            canvas_height = canvas.winfo_height()
+            
+            # Dapatkan total tinggi konten
+            canvas.update_idletasks()
+            bbox = canvas.bbox("all")
+            if not bbox:
+                return
+            content_height = bbox[3] - bbox[1]
+            
+            if content_height <= canvas_height:
+                # Konten muat semua, tidak perlu scroll
+                return
+            
+            # Hitung posisi scroll yang ideal
+            # Taruh widget di tengah viewport dengan offset 100px dari atas
+            target_y = widget_y - 100
+            
+            # Normalisasi ke range 0.0 - 1.0
+            scroll_position = target_y / content_height
+            
+            # Batasi antara 0.0 dan 1.0
+            scroll_position = max(0.0, min(1.0, scroll_position))
+            
+            # Terapkan scroll
+            canvas.yview_moveto(scroll_position)
+            
+        except Exception as e:
+            # Abaikan error untuk menghindari crash
+            print(f"Scroll error: {e}")
+            pass
+
     def collect_form(self):
         """Ambil data dari form saat ini"""        
         return PesertaModel(
@@ -361,20 +472,21 @@ class InputPesertaPage(ctk.CTkFrame):
         self.entries["pendidikan"].set(peserta.pendidikan)
         
         self.entries["instansi"].delete(0, "end")
-        self.entries["telepinstansion"].insert(0, peserta.instansi)
+        self.entries["instansi"].insert(0, peserta.instansi)
     
     def next_peserta(self):
         """Pindah ke peserta selanjutnya"""
         # Validasi form saat ini
         peserta = self.collect_form()
         errors = peserta_validator.PesertaValidator.validate(peserta)
-     
         if errors:
-            messagebox.showerror(
-                "Validasi Error",
-                "Harap perbaiki kesalahan berikut:\n\n" + "\n".join(f"• {e}" for e in errors)
-            )
+            for key, message in errors.items():
+                self.entries[key].set_error(message)
+            first_key = next(iter(errors))
+            self.scroll_to_widget(self.entries[first_key])
+            self.form_frame.focus_set()
             return
+            
         
         # Update atau tambah ke list
         if self.current_index < len(self.list_peserta):
@@ -384,25 +496,22 @@ class InputPesertaPage(ctk.CTkFrame):
         
         # Show data container jika belum terlihat
         if len(self.list_peserta) > 0 and not self.data_container_wrapper.winfo_ismapped():
-            self.data_container_wrapper.pack(fill="x", pady=(0, 15), after=self.header_label)
+            self.data_container_wrapper.pack(fill="x", padx=50, pady=(0, 15), after=self.header_label)
         
         # Pindah ke index selanjutnya
-        self.current_index = len(self.list_peserta)
+        self.current_index += 1
         
         # Load data peserta berikutnya jika ada, atau reset form
         if self.current_index < len(self.list_peserta):
             self.load_form(self.list_peserta[self.current_index])
         else:
             self.clear_form()
-        
+                    
         # Update UI
         self.refresh_UI_Form()
     
-    def previous_peserta(self):
-        """Kembali ke peserta sebelumnya"""
-        if self.current_index > 0:
-            # Simpan data saat ini jika ada isinya
-            if (
+    def _cek_form_filled(self):
+        return (
                 self.entries["nik"].get().strip() or
                 self.entries["tempat_lahir"].get().strip() or
                 self.entries["tanggal_lahir"].get().strip() or
@@ -413,7 +522,13 @@ class InputPesertaPage(ctk.CTkFrame):
                 self.entries["provinsi"].get().strip() or
                 self.entries["telepon"].get().strip() or
                 self.entries["instansi"].get().strip()
-            ):
+            )
+   
+    def previous_peserta(self):
+        """Kembali ke peserta sebelumnya"""
+        if self.current_index > 0:
+            # Simpan data saat ini jika ada isinya
+            if self._cek_form_filled():
                 peserta = self.collect_form()
                 if self.current_index < len(self.list_peserta):
                     self.list_peserta[self.current_index] = peserta
@@ -430,7 +545,18 @@ class InputPesertaPage(ctk.CTkFrame):
             self.refresh_UI_Form()
        
     def clear_form(self):
+        self.scroll_to_widget(self.header_label)
+        self.form_frame.focus_set()
         for key, widget in self.entries.items():
+            
+            if key == "sertifikasi":
+                continue
+            
+            if key == "skema":
+                continue
+            
+            if key == "pendidikan":
+                continue
 
             # 1. NikEntry
             if isinstance(widget, nik_entry.NikEntry):
@@ -452,6 +578,7 @@ class InputPesertaPage(ctk.CTkFrame):
                     widget.delete(0, "end")
                 except Exception:
                     pass
+        
     
     def refresh_UI_Form(self):
         """Update label counter peserta"""
@@ -464,10 +591,18 @@ class InputPesertaPage(ctk.CTkFrame):
         else:
             self.prev_btn.configure(state="disabled")
             
+        # """Update state tombol navigasi"""
+        # # Tombol prev hanya aktif jika bukan peserta pertama 
+        # if self.current_index > 0:
+        #     self.prev_btn.configure(state="normal")
+        #     self.prev_btn.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        # else:
+        #     self.prev_btn.grid_forget()
+            
         """Update state sertifikasi combo box"""
-        if len(self.list_peserta) > 1:
+        if len(self.list_peserta) >= 1:
             # Disable combo box, jadikan readonly
-            self.sertifikasi_combo.configure(state="disabled")
+            self.entries["sertifikasi"].configure(state="disabled")
         else:
             # Enable combo box
             self.entries["sertifikasi"].configure(state="normal")
@@ -485,13 +620,15 @@ class InputPesertaPage(ctk.CTkFrame):
             btn_container = ctk.CTkFrame(self.data_scroll_frame, fg_color="transparent")
             btn_container.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
             
+            is_current = (idx == self.current_index)
+
             # Button data peserta
             btn = ctk.CTkButton(
                 btn_container,
                 text=f"#{idx + 1}",
                 font=("Arial", 14, "bold"),
-                fg_color="#1a73e8" if idx == self.current_index else "#555555",
-                hover_color="#1557b0" if idx == self.current_index else "#666666",
+                fg_color="#1a73e8" if is_current else "#555555",
+                hover_color="#1557b0" if is_current else "#666666",
                 height=40,
                 width=70,
                 corner_radius=8,
@@ -522,21 +659,13 @@ class InputPesertaPage(ctk.CTkFrame):
     def jump_to_peserta(self, index):
         """Jump ke peserta tertentu"""
         # Simpan data saat ini dulu
-        if (
-                self.entries["nik"].get().strip() or
-                self.entries["tempat_lahir"].get().strip() or
-                self.entries["tanggal_lahir"].get().strip() or
-                self.entries["alamat"].get().strip() or
-                self.entries["kelurahan"].get().strip() or
-                self.entries["kecamatan"].get().strip() or
-                self.entries["kabupaten"].get().strip() or
-                self.entries["provinsi"].get().strip() or
-                self.entries["telepon"].get().strip() or
-                self.entries["instansi"].get().strip()
-            ):
+        if self._cek_form_filled():
             peserta = self.collect_form()
             if self.current_index < len(self.list_peserta):
                 self.list_peserta[self.current_index] = peserta
+            else:
+                # Form saat ini adalah peserta baru yang belum tersimpan
+                self.list_peserta.append(peserta)
         
         # Pindah ke index yang dipilih
         self.current_index = index
@@ -553,10 +682,18 @@ class InputPesertaPage(ctk.CTkFrame):
             # Adjust current index
             if self.current_index >= len(self.list_peserta):
                 self.current_index = max(0, len(self.list_peserta) - 1)
-            
+            elif self.current_index > index:
+                # Jika hapus peserta sebelum current, geser index
+                self.current_index -= 1
+                
             # Load data atau reset
             if len(self.list_peserta) > 0:
-                self.load_form(self.list_peserta[self.current_index])
+                if self.current_index < len(self.list_peserta):
+                    # Load peserta yang ada
+                    self.load_form(self.list_peserta[self.current_index])
+                else:
+                    # Current index di luar range, berarti form baru
+                    self.clear_form()
             else:
                 self.clear_form()
                 self.current_index = 0
@@ -586,16 +723,17 @@ class InputPesertaPage(ctk.CTkFrame):
     def save_all_data(self):
         """Simpan semua data peserta"""
         # Validasi form saat ini terlebih dahulu
-        errors = self.validate_current_form()
+        peserta = self.collect_form()
+        errors = peserta_validator.PesertaValidator.validate(peserta)
         if errors:
-            messagebox.showerror(
-                "Validasi Error",
-                "Harap perbaiki kesalahan berikut:\n\n" + "\n".join(f"• {e}" for e in errors)
-            )
+            for key, message in errors.items():
+                self.entries[key].set_error(message)
+            first_key = next(iter(errors))
+            self.scroll_to_widget(self.entries[first_key])
+            self.form_frame.focus_set()
             return
         
         # Simpan peserta terakhir
-        peserta = self.collect_form()
         if self.current_index < len(self.list_peserta):
             self.list_peserta[self.current_index] = peserta
         else:
