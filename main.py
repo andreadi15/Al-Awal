@@ -2,11 +2,13 @@
 # FILE: main.py
 # =======================
 import customtkinter as ctk
+# from config import DATA_PESERTA
 from pages.dashboard import DashboardPage
 from pages.peserta import PesertaPage
 from pages.inputpeserta import InputPesertaPage
 from pages.projects import ProjectsPage
 from pages.settings import SettingsPage
+from services.database import init_db
 
 
 class App(ctk.CTk):
@@ -225,6 +227,7 @@ class App(ctk.CTk):
         self.update_idletasks()
 
 if __name__ == "__main__":
+    init_db()
     app = App()
     app.mainloop()
     

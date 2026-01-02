@@ -8,10 +8,10 @@ class PesertaModel:
     Menyimpan semua informasi peserta dalam satu object
     """
     
-    def __init__(self, sertifikasi, skema, nama, nik, tempat_lahir, tanggal_lahir, 
+    def __init__(self, id_sertifikasi, skema, nama, nik, tempat_lahir, tanggal_lahir, 
                  alamat, kelurahan, kecamatan, kabupaten, provinsi, 
                  telepon, pendidikan, instansi):
-        self.sertifikasi = sertifikasi
+        self.id_sertifikasi = id_sertifikasi
         self.skema = skema
         self.nama = nama
         self.nik = nik
@@ -29,7 +29,7 @@ class PesertaModel:
     def to_dict(self):
         """Convert model ke dictionary untuk mudah disimpan"""
         return {
-            "sertifikasi": self.sertifikasi,
+            "id_sertifikasi": self.id_sertifikasi,
             "skema": self.skema,
             "nama": self.nama,
             "nik": self.nik,
@@ -49,7 +49,7 @@ class PesertaModel:
     def from_dict(cls, data):
         """Buat PesertaModel dari dictionary"""
         return cls(
-            sertifikasi=data.get("sertifikasi", ""),
+            id_sertifikasi=data.get("id_sertifikasi", ""),
             skema=data.get("skema", ""),
             nama=data.get("nama", ""),
             nik=data.get("nik", ""),

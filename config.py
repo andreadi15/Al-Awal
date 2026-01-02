@@ -22,3 +22,6 @@ SERTIFIKASI_OPTIONS = [
     "CEPU",
     "IADC"
 ]
+
+DB_PATH = "database/data.db"
+DEBUG = True

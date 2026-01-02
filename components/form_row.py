@@ -11,6 +11,8 @@ class FormRow:
             anchor="w",
             text_color="#ffffff"
         )
+        label.bind("<Button-1>", lambda e: label.focus_set())
+
         label.grid(
             row=row,
             column=0,

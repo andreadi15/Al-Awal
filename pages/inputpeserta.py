@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 import re
 from pages.peserta_model import PesertaModel
+from services.database import DB_Save_Peserta
 from components import peserta_validator,create_entry,form_row,nik_entry,peserta_list_panel
 from config import SERTIFIKASI_OPTIONS,SKEMA_OPTIONS,PENDIDIKAN_OPTIONS
 
@@ -34,6 +35,7 @@ class InputPesertaPage(ctk.CTkFrame):
             scrollbar_button_hover_color="#666666")
         self.main_container.pack(fill="both", expand=True, padx=20, pady=20)
         self.main_container.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.main_container.bind("<Button-1>", lambda e: self.main_container.focus_set())
 
         
         # Header
@@ -44,13 +46,15 @@ class InputPesertaPage(ctk.CTkFrame):
             text_color="#1a73e8"
         )
         self.header_label.pack(pady=(0, 10))
-        
+        self.header_label.bind("<Button-1>", lambda e: self.header_label.focus_set())
+
         self.form_container = ctk.CTkFrame(
             self.main_container,
             fg_color="#2a2a2a"
         )
         self.form_container.pack(fill="both", expand=True)
-        
+        self.form_container.bind("<Button-1>", lambda e: self.form_container.focus_set())
+
     def _build_container_data(self):
         # Container untuk data peserta yang sudah diinput (initially hidden)
         self.data_container_wrapper = ctk.CTkFrame(self.main_container, fg_color="transparent")
@@ -100,25 +104,41 @@ class InputPesertaPage(ctk.CTkFrame):
     def _build_form(self):
         self.form_frame = ctk.CTkFrame(self.form_container, fg_color="#333333", corner_radius=15)
         self.form_frame.pack(fill="both", expand=True, padx=50)
+        self.form_frame.bind("<Button-1>", lambda e: self.form_frame.focus_set())
+
         
         # Form content dengan padding
         form_content = ctk.CTkFrame(self.form_frame, fg_color="transparent")
         form_content.pack(fill="both", expand=True, padx=40, pady=40)
-        
+        form_content.bind("<Button-1>", lambda e: form_content.focus_set())
+
         # Header row dengan Sertifikasi dan Counter
         header_row = ctk.CTkFrame(form_content, fg_color="transparent")
         header_row.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 20))
         header_row.grid_columnconfigure(1, weight=1)
-        
+        header_row.bind("<Button-1>", lambda e: header_row.focus_set())
+
         # Sertifikasi combo box (kiri)
         sertifikasi_label = ctk.CTkLabel(header_row, text="Sertifikasi:", font=("Arial", 14, "bold"), text_color="#ffffff")
         sertifikasi_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
-        
-        entry = create_entry.createEntry(header_row, "combobox", options=SERTIFIKASI_OPTIONS, width=150)
+        sertifikasi_label.bind("<Button-1>", lambda e: sertifikasi_label.focus_set())
+
+        entry = create_entry.createEntry(header_row, "combobox", options=SERTIFIKASI_OPTIONS, width=140)
         self.entries["sertifikasi"] = entry.widget
         self.entries["sertifikasi"].grid(row=0, column=1, sticky="w")
         self.entries["sertifikasi"].set(SERTIFIKASI_OPTIONS[0])
-        
+        self.entries["sertifikasi"].bind("<Button-1>", lambda e: self.entries["sertifikasi"].focus_set())
+
+        tanggal_pelatihan_label = ctk.CTkLabel(header_row, text="Tgl Pelatihan:", font=("Arial", 14, "bold"), text_color="#ffffff")
+        tanggal_pelatihan_label.grid(row=1, column=0, sticky="w", padx=(0, 10))
+        tanggal_pelatihan_label.bind("<Button-1>", lambda e: tanggal_pelatihan_label.focus_set())
+
+        entry = create_entry.createEntry(header_row, "entry", placeholder="DD-MM-YYYY")
+        self.entries["tanggal_pelatihan"] = entry.widget
+        self.entries["tanggal_pelatihan"].grid(row=1, column=1, sticky="w", pady=(10, 0))
+        self.entries["tanggal_pelatihan"].bind("<KeyPress>", self.format_tanggal_lahir)
+        self.entries["tanggal_pelatihan"].bind("<Button-1>", lambda e: self.entries["tanggal_pelatihan"].focus_set())
+
         # Counter peserta (kanan)
         self.counter_label = ctk.CTkLabel(
             header_row,
@@ -131,7 +151,8 @@ class InputPesertaPage(ctk.CTkFrame):
             pady=5
         )
         self.counter_label.grid(row=0, column=2, sticky="e")
-        
+        self.counter_label.bind("<Button-1>", lambda e: self.counter_label.focus_set())
+
         # Row tracking
         current_row = 1
         
@@ -772,21 +793,8 @@ class InputPesertaPage(ctk.CTkFrame):
         print("=" * 50)
         
         for i, peserta in enumerate(list_peserta, start=1):
-            print(f"\nPeserta #{i}:")
-            print(f"  Sertifikasi: {peserta.sertifikasi}")
-            print(f"  Skema: {peserta.skema}")
-            print(f"  Nama: {peserta.nama}")
-            print(f"  NIK: {peserta.nik}")
-            print(f"  Tempat Lahir: {peserta.tempat_lahir}")
-            print(f"  Tanggal Lahir: {peserta.tanggal_lahir}")
-            print(f"  Alamat: {peserta.alamat}")
-            print(f"  Kelurahan: {peserta.kelurahan}")
-            print(f"  Kecamatan: {peserta.kecamatan}")
-            print(f"  Kabupaten: {peserta.kabupaten}")
-            print(f"  Provinsi: {peserta.provinsi}")
-            print(f"  Telepon: {peserta.telepon}")
-            print(f"  Pendidikan: {peserta.pendidikan}")
-            print(f"  Instansi: {peserta.Instansi}")
+            print(f"{i}.Saving Data {peserta.nama}")
+            DB_Save_Peserta(peserta)
         
         print("\n" + "=" * 50)
         print(f"Total: {len(list_peserta)} peserta")
