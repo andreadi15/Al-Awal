@@ -2,25 +2,34 @@ import customtkinter as ctk
 from tkinter import messagebox
 import re
 from pages.peserta_model import PesertaModel
-from services.database import DB_Save_Peserta
+from services.database import DB_Save_Peserta,DB_Get_All_Sertifikasi
 from components import peserta_validator,create_entry,form_row,nik_entry,peserta_list_panel
 from config import SERTIFIKASI_OPTIONS,SKEMA_OPTIONS,PENDIDIKAN_OPTIONS
 
 class InputPesertaPage(ctk.CTkFrame):
-    def __init__(self, parent):
+    def __init__(self, parent, id_sertifikasi=None):
         super().__init__(parent, fg_color="#2a2a2a")
 
+        self.sertifikasi = []
+        self.sertifikasi_map = {}
         self.entries = {}
         self.error_labels = {}
         # List untuk menyimpan semua peserta
         self.list_peserta = []
         
+        # Set ID sertifikasi
+        if id_sertifikasi:
+            self.selected_id_sertifikasi = id_sertifikasi
+        else:
+            self.selected_id_sertifikasi = ""
+
         # Index peserta saat ini (0-based)
         self.current_index = 0  
         
         self.DEFAULT_BORDER_COLOR = "#1a73e8"
         self.ERROR_BORDER_COLOR = "#ff4d4f"
         
+        self.get_All_Sertifikasi()
         self._build_layout()
         self._build_container_data()
         self._build_form()
@@ -122,22 +131,26 @@ class InputPesertaPage(ctk.CTkFrame):
         sertifikasi_label = ctk.CTkLabel(header_row, text="Sertifikasi:", font=("Arial", 14, "bold"), text_color="#ffffff")
         sertifikasi_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
         sertifikasi_label.bind("<Button-1>", lambda e: sertifikasi_label.focus_set())
-
-        entry = create_entry.createEntry(header_row, "combobox", options=SERTIFIKASI_OPTIONS, width=140)
+        
+        sertifikasi_options = self._generate_sertifikasi_options()
+        
+        entry = create_entry.createEntry(header_row, "combobox", options=sertifikasi_options, width=250)
         self.entries["sertifikasi"] = entry.widget
         self.entries["sertifikasi"].grid(row=0, column=1, sticky="w")
-        self.entries["sertifikasi"].set(SERTIFIKASI_OPTIONS[0])
+        self.entries["sertifikasi"].configure(state="readonly")
+        
+        # Set combo box berdasarkan id_sertifikasi yang dikirim
+        if sertifikasi_options:
+            if self.selected_id_sertifikasi:
+                # Cari display text yang sesuai dengan ID
+                self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
+            else:
+                # Default ke option pertama
+                self.entries["sertifikasi"].set(sertifikasi_options[0])
+                self._update_selected_id()
+                
+        self.entries["sertifikasi"].configure(command=self._on_sertifikasi_change)
         self.entries["sertifikasi"].bind("<Button-1>", lambda e: self.entries["sertifikasi"].focus_set())
-
-        tanggal_pelatihan_label = ctk.CTkLabel(header_row, text="Tgl Pelatihan:", font=("Arial", 14, "bold"), text_color="#ffffff")
-        tanggal_pelatihan_label.grid(row=1, column=0, sticky="w", padx=(0, 10))
-        tanggal_pelatihan_label.bind("<Button-1>", lambda e: tanggal_pelatihan_label.focus_set())
-
-        entry = create_entry.createEntry(header_row, "entry", placeholder="DD-MM-YYYY")
-        self.entries["tanggal_pelatihan"] = entry.widget
-        self.entries["tanggal_pelatihan"].grid(row=1, column=1, sticky="w", pady=(10, 0))
-        self.entries["tanggal_pelatihan"].bind("<KeyPress>", self.format_tanggal_lahir)
-        self.entries["tanggal_pelatihan"].bind("<Button-1>", lambda e: self.entries["tanggal_pelatihan"].focus_set())
 
         # Counter peserta (kanan)
         self.counter_label = ctk.CTkLabel(
@@ -184,7 +197,7 @@ class InputPesertaPage(ctk.CTkFrame):
         entry = create_entry.createEntry(form_content, "entry", placeholder="DD-MM-YYYY")
         self.entries["tanggal_lahir"] = entry.widget
         form_row.FormRow(form_content,current_row,"Tanggal Lahir",self.entries["tanggal_lahir"])
-        self.entries["tanggal_lahir"].bind("<KeyPress>", self.format_tanggal_lahir)
+        self.entries["tanggal_lahir"].bind("<KeyPress>", self.format_tanggal_input)
         current_row += 2
         
         # 6. Alamat (Text area)
@@ -243,15 +256,15 @@ class InputPesertaPage(ctk.CTkFrame):
         reset_frame = ctk.CTkFrame(form_content, fg_color="transparent")
         reset_frame.grid(row=current_row, column=0, columnspan=2, sticky="e", pady=(10, 20))
         
-        reset_link = ctk.CTkLabel(
+        self.reset_link = ctk.CTkLabel(
             reset_frame,
             text="🔄 Reset Form",
             font=("Arial", 13, "underline"),
             text_color="#ff051e",
             cursor="hand2"
         )
-        reset_link.pack()
-        reset_link.bind("<Button-1>", lambda e: self.clear_form())
+        self.reset_link.pack()
+        self.reset_link.bind("<Button-1>", lambda e: self.clear_form())
         
         current_row += 1
         
@@ -301,59 +314,99 @@ class InputPesertaPage(ctk.CTkFrame):
         # Configure grid untuk responsive buttons (3 kolom)
         for i in range(3):
             button_frame.grid_columnconfigure(i, weight=1, uniform="buttons")
-        
-    # def format_tanggal_lahir(self, event):
-    #     """Auto-format tanggal lahir: DD-MM-YYYY"""
-    #     entry = event.widget
-    #     text = entry.get()
-        
-    #     # Hapus semua karakter non-digit
-    #     digits = re.sub(r'\D', '', text)
-        
-    #     # Batasi maksimal 8 digit
-    #     digits = digits[:8]
-        
-    #     # Format dengan strip
-    #     formatted = ""
-    #     for i, digit in enumerate(digits):
-    #         if i == 2 or i == 4:
-    #             formatted += "-"
-    #         formatted += digit
-        
-    #     # Update entry jika berbeda
-    #     if formatted != text:
-    #         cursor_pos = entry.index("insert")
-    #         entry.delete(0, "end")
-    #         entry.insert(0, formatted)
-    #         if len(formatted) > len(text):
-    #             cursor_pos += 1
-    #         entry.icursor(cursor_pos)
 
     # =======================
     # LOGIC
     # =======================
-    def format_tanggal_lahir(self, event):
-        """Handler untuk input tanggal lahir - KeyPress"""
+    def _set_sertifikasi_by_id(self, id_sertifikasi):
+        """Set combo box berdasarkan ID yang dikirim"""
+        for display_text, sert_id in self.sertifikasi_map.items():
+            if sert_id == id_sertifikasi:
+                self.entries["sertifikasi"].set(display_text)
+                self.selected_id_sertifikasi = id_sertifikasi
+                return
+            
+    def get_All_Sertifikasi(self):
+        self.sertifikasi = DB_Get_All_Sertifikasi()
+        
+    def _generate_sertifikasi_options(self):
+        """Generate options untuk combo box dengan format: 'Sertifikasi Tanggal'"""
+        options = []
+        self.sertifikasi_map = {}
+        
+        for sert in self.sertifikasi:
+            # Truncate nama sertifikasi jika lebih dari 20 karakter
+            nama = sert["sertifikasi"]
+            if len(nama) > 20:
+                nama = nama[:17] + "..."
+            
+            # Format tanggal
+            tanggal = sert["tanggal_pelatihan"]
+            
+            # Gabungkan jadi display text
+            display_text = f"{nama} - {tanggal}"
+            
+            # Simpan mapping display_text -> id_sertifikasi
+            self.sertifikasi_map[display_text] = sert["id_sertifikasi"]
+            
+            options.append(display_text)
+        
+        return options
+    
+    def _on_sertifikasi_change(self, choice):
+        """Callback saat combo box sertifikasi berubah"""
+        self._update_selected_id()
+        
+    def _update_selected_id(self):
+        """Update selected_id_sertifikasi berdasarkan combo box"""
+        current_text = self.entries["sertifikasi"].get()
+        self.selected_id_sertifikasi = self.sertifikasi_map.get(current_text, "")
+        print(f"[DEBUG] Selected ID: {self.selected_id_sertifikasi}")
+        
+    def format_tanggal_input(self, event):  # atau format_tanggal_lahir
+        """Handler untuk input tanggal dengan format DD-MM-YYYY"""
         entry = event.widget
         current_text = entry.get()
+        
+        navigation_keys = ["Left", "Right", "Home", "End", "Up", "Down"]
+        if event.keysym in navigation_keys:
+            return
+
+        # 🔥 SIMPAN posisi cursor SEBELUM modifikasi
+        cursor_pos = entry.index("insert")
         
         # Ambil hanya digit dari text saat ini
         current_digits = re.sub(r'\D', '', current_text)
         
         # Handle Backspace
         if event.keysym == "BackSpace":
-            if len(current_digits) > 0:
-                current_digits = current_digits[:-1]
+            if cursor_pos > 0:
+                # Hitung posisi digit yang akan dihapus
+                # Hitung berapa separator sebelum cursor
+                separators_before = current_text[:cursor_pos].count('-')
+                # Posisi digit = cursor - jumlah separator
+                digit_pos = cursor_pos - separators_before - 1
+                
+                if digit_pos >= 0 and digit_pos < len(current_digits):
+                    # Hapus digit di posisi yang benar
+                    current_digits = current_digits[:digit_pos] + current_digits[digit_pos + 1:]
             else:
                 return "break"
+                
         # Handle input digit
         elif event.char.isdigit():
-            # Cek apakah sudah mencapai batas 8 digit
             if len(current_digits) >= 8:
                 return "break"
-            current_digits += event.char
+            
+            # Hitung posisi digit untuk insert
+            separators_before = current_text[:cursor_pos].count('-')
+            digit_pos = cursor_pos - separators_before
+            
+            # Insert digit di posisi yang benar
+            current_digits = current_digits[:digit_pos] + event.char + current_digits[digit_pos:]
+            
         else:
-            # Karakter selain digit atau backspace, block
+            # Block karakter selain digit atau backspace
             return "break"
         
         # Format dengan strip: DD-MM-YYYY
@@ -366,6 +419,23 @@ class InputPesertaPage(ctk.CTkFrame):
         # Update entry
         entry.delete(0, "end")
         entry.insert(0, formatted)
+        
+        # 🔥 RESTORE posisi cursor dengan adjustment
+        if event.keysym == "BackSpace":
+            # Setelah backspace, cursor mundur 1 posisi
+            new_cursor_pos = max(0, cursor_pos - 1)
+            # Skip separator jika cursor di atasnya
+            if new_cursor_pos > 0 and new_cursor_pos < len(formatted) and formatted[new_cursor_pos] == '-':
+                new_cursor_pos -= 1
+        else:
+            # Setelah insert digit, cursor maju 1 posisi
+            new_cursor_pos = cursor_pos + 1
+            # Skip separator jika auto-inserted
+            if new_cursor_pos < len(formatted) and formatted[new_cursor_pos] == '-':
+                new_cursor_pos += 1
+        
+        # Set cursor position
+        entry.icursor(min(new_cursor_pos, len(formatted)))
         
         return "break"
     
@@ -438,7 +508,7 @@ class InputPesertaPage(ctk.CTkFrame):
     def collect_form(self):
         """Ambil data dari form saat ini"""        
         return PesertaModel(
-            sertifikasi=self.entries["sertifikasi"].get(),
+            id_sertifikasi=self.selected_id_sertifikasi,
             skema=self.entries["skema"].get(),
             nama=self.entries["nama"].get(),
             nik=self.entries["nik"].get_value(),
@@ -456,7 +526,7 @@ class InputPesertaPage(ctk.CTkFrame):
  
     def load_form(self, peserta: PesertaModel):
         """Load data peserta ke form"""
-        self.entries["sertifikasi"].set(peserta.sertifikasi)
+        # self.entries["sertifikasi"].set(peserta.sertifikasi)
         self.entries["skema"].set(peserta.skema)
         
         self.entries["nama"].delete(0, "end")
@@ -497,6 +567,8 @@ class InputPesertaPage(ctk.CTkFrame):
     
     def next_peserta(self):
         """Pindah ke peserta selanjutnya"""
+        if len(self.sertifikasi) <= 0:
+            return
         # Validasi form saat ini
         peserta = self.collect_form()
         errors = peserta_validator.PesertaValidator.validate(peserta)
@@ -612,13 +684,22 @@ class InputPesertaPage(ctk.CTkFrame):
         else:
             self.prev_btn.configure(state="disabled")
             
-        # """Update state tombol navigasi"""
-        # # Tombol prev hanya aktif jika bukan peserta pertama 
-        # if self.current_index > 0:
-        #     self.prev_btn.configure(state="normal")
-        #     self.prev_btn.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
-        # else:
-        #     self.prev_btn.grid_forget()
+        """Update state reset button"""
+        # 🔥 Reset hanya aktif di NEW INPUT (index >= jumlah peserta tersimpan)
+        if self.current_index >= len(self.list_peserta):
+            # NEW INPUT - Enable reset
+            self.reset_link.configure(
+                text_color="#ff051e",
+                cursor="hand2"
+            )
+            self.reset_link.bind("<Button-1>", lambda e: self.clear_form())
+        else:
+            # OLD DATA - Disable reset
+            self.reset_link.configure(
+                text_color="#666666",  # Abu-abu
+                cursor="arrow"  # Cursor normal
+            )
+            self.reset_link.unbind("<Button-1>")
             
         """Update state sertifikasi combo box"""
         if len(self.list_peserta) >= 1:
@@ -626,7 +707,7 @@ class InputPesertaPage(ctk.CTkFrame):
             self.entries["sertifikasi"].configure(state="disabled")
         else:
             # Enable combo box
-            self.entries["sertifikasi"].configure(state="normal")
+            self.entries["sertifikasi"].configure(state="readonly")
     
         """Update button data peserta di container"""
         # Hapus semua button lama
@@ -679,6 +760,9 @@ class InputPesertaPage(ctk.CTkFrame):
     
     def jump_to_peserta(self, index):
         """Jump ke peserta tertentu"""
+        for key, w in self.entries.items():
+            w.clear_error()
+            
         # Simpan data saat ini dulu
         if self._cek_form_filled():
             peserta = self.collect_form()
@@ -743,6 +827,8 @@ class InputPesertaPage(ctk.CTkFrame):
     
     def save_all_data(self):
         """Simpan semua data peserta"""
+        if len(self.sertifikasi) <= 0:
+            return
         # Validasi form saat ini terlebih dahulu
         peserta = self.collect_form()
         errors = peserta_validator.PesertaValidator.validate(peserta)
@@ -794,7 +880,7 @@ class InputPesertaPage(ctk.CTkFrame):
         
         for i, peserta in enumerate(list_peserta, start=1):
             print(f"{i}.Saving Data {peserta.nama}")
-            DB_Save_Peserta(peserta)
+            DB_Save_Peserta(peserta, self.selected_id_sertifikasi)
         
         print("\n" + "=" * 50)
         print(f"Total: {len(list_peserta)} peserta")

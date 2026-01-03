@@ -14,14 +14,15 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
     Matching dengan design main aplikasi
     Responsive dan auto-center di layar user
     """
-    def __init__(self, parent, callback, id_sertifikasi, sertifikasi, tanggal_pelatihan):
+    def __init__(self, parent, callback, sertif=None):
         super().__init__(parent)
     
         self.callback = callback
-        self.id_sertifikasi = id_sertifikasi
-        self.tanggal_pelatihan = tanggal_pelatihan
-        self.sertifikasi = sertifikasi
         
+        self.id_sertifikasi = sertif["id_sertifikasi"] if sertif else None
+        self.tanggal_pelatihan = datetime.strptime(sertif["tanggal_pelatihan"], "%Y-%m-%d").strftime("%d-%m-%Y") if sertif else None
+        self.sertifikasi = sertif["sertifikasi"] if sertif else None
+            
         # Window configuration
         self.title("Tambah Sertifikasi Baru")
         
@@ -90,7 +91,7 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
             font=("Arial", 14, "bold")
         )
         self.sertifikasi_entry.pack(fill="x", pady=(0, 20))
-        if self.sertifikasi in SERTIFIKASI_OPTIONS:
+        if self.sertifikasi != None:
             self.sertifikasi_entry.set(self.sertifikasi)
         
         # 2. Tanggal Pelatihan
@@ -113,14 +114,15 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
         self.tanggal_entry.pack(fill="x")
         
         # Bind KeyPress untuk format otomatis
-        self.tanggal_entry.bind("<KeyPress>", self.format_tanggal_pelatihan)
+        self.tanggal_entry.bind("<KeyPress>", self.format_tanggal_input)
         
         # Set default tanggal hari ini
         today = datetime.now()
         default_date = today.strftime("%d-%m-%Y")
-        if not self.tanggal_pelatihan:
+        if self.tanggal_pelatihan == None:
             self.tanggal_entry.insert(0, default_date)
-        self.tanggal_entry.insert(0, self.tanggal_pelatihan)
+        else:
+            self.tanggal_entry.insert(0, self.tanggal_pelatihan)
         
         
         # Buttons - Pack di bottom dengan side="bottom" SEBELUM spacer
@@ -161,31 +163,50 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
         # Focus to first field
         self.sertifikasi_entry.focus()
     
-    def format_tanggal_pelatihan(self, event):
-        """
-        Handler untuk input tanggal pelatihan dengan format DD-MM-YYYY
-        Auto-format saat user mengetik
-        """
+    def format_tanggal_input(self, event):  # atau format_tanggal_lahir
+        """Handler untuk input tanggal dengan format DD-MM-YYYY"""
         entry = event.widget
         current_text = entry.get()
+        
+        navigation_keys = ["Left", "Right", "Home", "End", "Up", "Down"]
+        if event.keysym in navigation_keys:
+            return
+        
+        # 🔥 SIMPAN posisi cursor SEBELUM modifikasi
+        cursor_pos = entry.index("insert")
         
         # Ambil hanya digit dari text saat ini
         current_digits = re.sub(r'\D', '', current_text)
         
         # Handle Backspace
         if event.keysym == "BackSpace":
-            if len(current_digits) > 0:
-                current_digits = current_digits[:-1]
+            if cursor_pos > 0:
+                # Hitung posisi digit yang akan dihapus
+                # Hitung berapa separator sebelum cursor
+                separators_before = current_text[:cursor_pos].count('-')
+                # Posisi digit = cursor - jumlah separator
+                digit_pos = cursor_pos - separators_before - 1
+                
+                if digit_pos >= 0 and digit_pos < len(current_digits):
+                    # Hapus digit di posisi yang benar
+                    current_digits = current_digits[:digit_pos] + current_digits[digit_pos + 1:]
             else:
                 return "break"
+                
         # Handle input digit
         elif event.char.isdigit():
-            # Cek apakah sudah mencapai batas 8 digit
             if len(current_digits) >= 8:
                 return "break"
-            current_digits += event.char
+            
+            # Hitung posisi digit untuk insert
+            separators_before = current_text[:cursor_pos].count('-')
+            digit_pos = cursor_pos - separators_before
+            
+            # Insert digit di posisi yang benar
+            current_digits = current_digits[:digit_pos] + event.char + current_digits[digit_pos:]
+            
         else:
-            # Karakter selain digit atau backspace, block
+            # Block karakter selain digit atau backspace
             return "break"
         
         # Format dengan strip: DD-MM-YYYY
@@ -198,6 +219,23 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
         # Update entry
         entry.delete(0, "end")
         entry.insert(0, formatted)
+        
+        # 🔥 RESTORE posisi cursor dengan adjustment
+        if event.keysym == "BackSpace":
+            # Setelah backspace, cursor mundur 1 posisi
+            new_cursor_pos = max(0, cursor_pos - 1)
+            # Skip separator jika cursor di atasnya
+            if new_cursor_pos > 0 and new_cursor_pos < len(formatted) and formatted[new_cursor_pos] == '-':
+                new_cursor_pos -= 1
+        else:
+            # Setelah insert digit, cursor maju 1 posisi
+            new_cursor_pos = cursor_pos + 1
+            # Skip separator jika auto-inserted
+            if new_cursor_pos < len(formatted) and formatted[new_cursor_pos] == '-':
+                new_cursor_pos += 1
+        
+        # Set cursor position
+        entry.icursor(min(new_cursor_pos, len(formatted)))
         
         return "break"
     
@@ -278,20 +316,20 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
             # Format tanggal untuk display (DD-MM-YYYY)
             display_date = datetime.strptime(tanggal_pelatihan, "%Y-%m-%d").strftime("%d-%m-%Y")
             
-            # Show success
-            self.show_success(
-                f"✓ Sertifikasi berhasil ditambahkan!\n\n"
-                f"ID: {self.id_sertifikasi}\n"
-                f"Jenis: {sertifikasi}\n"
-                f"Tanggal: {display_date}"
-            )
-            
-            # Callback to parent
-            if self.callback:
-                self.callback()
+            # # Show success
+            # self.show_success(
+            #     f"✓ Sertifikasi berhasil ditambahkan!\n\n"
+            #     f"ID: {self.id_sertifikasi}\n"
+            #     f"Jenis: {sertifikasi}\n"
+            #     f"Tanggal: {display_date}"
+            # )
             
             # Close dialog
             self.destroy()
+            
+            # Callback to parent
+            if self.callback:
+                self.after(100, self.callback)
             
         except Exception as e:
             self.show_error(f"Gagal menyimpan data!\n\n{str(e)}")
@@ -357,63 +395,65 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
             command=error_dialog.destroy
         ).pack(pady=10)
     
-    def show_success(self, message):
-        """Show success message with auto-center"""
-        success_dialog = ctk.CTkToplevel(self)
-        success_dialog.title("Sukses")
+    # def show_success(self, message):
+    #     """Show success message with auto-center"""
+    #     success_dialog = ctk.CTkToplevel(self)
+    #     success_dialog.title("Sukses")
         
-        # Set size
-        dialog_width = 400
-        dialog_height = 240
-        success_dialog.geometry(f"{dialog_width}x{dialog_height}")
-        success_dialog.resizable(False, False)
-        success_dialog.configure(fg_color="#2a2a2a")
+    #     # Set size
+    #     dialog_width = 400
+    #     dialog_height = 240
+    #     success_dialog.geometry(f"{dialog_width}x{dialog_height}")
+    #     success_dialog.resizable(False, False)
+    #     success_dialog.configure(fg_color="#2a2a2a")
         
-        # CRITICAL: Update untuk mendapatkan ukuran screen
-        success_dialog.update_idletasks()
+    #     # CRITICAL: Update untuk mendapatkan ukuran screen
+    #     success_dialog.update_idletasks()
         
-        # Center relative to screen
-        screen_width = success_dialog.winfo_screenwidth()
-        screen_height = success_dialog.winfo_screenheight()
+    #     # Center relative to screen
+    #     screen_width = success_dialog.winfo_screenwidth()
+    #     screen_height = success_dialog.winfo_screenheight()
         
-        x = (screen_width - dialog_width) // 2
-        y = (screen_height - dialog_height) // 2
+    #     x = (screen_width - dialog_width) // 2
+    #     y = (screen_height - dialog_height) // 2
         
-        success_dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
+    #     success_dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
         
-        success_dialog.transient(self)
-        success_dialog.grab_set()
+    #     success_dialog.transient(self)
+    #     success_dialog.grab_set()
         
-        # Header
-        header = ctk.CTkFrame(success_dialog, fg_color="#4caf50", height=60)
-        header.pack(fill="x")
-        header.pack_propagate(False)
+    #     # Header
+    #     header = ctk.CTkFrame(success_dialog, fg_color="#4caf50", height=60)
+    #     header.pack(fill="x")
+    #     header.pack_propagate(False)
         
-        ctk.CTkLabel(
-            header,
-            text="✓ Sukses",
-            font=("Arial", 18, "bold"),
-            text_color="white"
-        ).pack(pady=15)
+    #     ctk.CTkLabel(
+    #         header,
+    #         text="✓ Sukses",
+    #         font=("Arial", 18, "bold"),
+    #         text_color="white"
+    #     ).pack(pady=15)
         
-        # Message
-        ctk.CTkLabel(
-            success_dialog,
-            text=message,
-            font=("Arial", 13),
-            wraplength=350,
-            justify="center"
-        ).pack(pady=20)
+    #     # Message
+    #     ctk.CTkLabel(
+    #         success_dialog,
+    #         text=message,
+    #         font=("Arial", 13),
+    #         wraplength=350,
+    #         justify="center"
+    #     ).pack(pady=20)
         
-        # OK button
-        ctk.CTkButton(
-            success_dialog,
-            text="OK",
-            width=120,
-            height=40,
-            font=("Arial", 14, "bold"),
-            fg_color="#4caf50",
-            hover_color="#45a049",
-            corner_radius=10,
-            command=success_dialog.destroy
-        ).pack(pady=10)
+    #     # OK button
+    #     ctk.CTkButton(
+    #         success_dialog,
+    #         text="OK",
+    #         width=120,
+    #         height=40,
+    #         font=("Arial", 14, "bold"),
+    #         fg_color="#4caf50",
+    #         hover_color="#45a049",
+    #         corner_radius=10,
+    #         command=success_dialog.destroy
+    #     ).pack(pady=10)
+        
+        

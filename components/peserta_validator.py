@@ -8,10 +8,6 @@ class PesertaValidator:
     @staticmethod
     def validate(peserta: PesertaModel):
         errors = {}
-
-        # Validasi Sertifikasi
-        if not peserta.sertifikasi.strip():
-            errors["sertifikasi"] = "Sertifikasi harus dipilih"
         
         # Validasi Skema
         if not peserta.skema.strip():

@@ -27,8 +27,6 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             id_peserta TEXT NOT NULL UNIQUE,
             id_sertifikasi TEXT NOT NULL,
-            sertifikasi TEXT NOT NULL,
-            tanggal_pelatihan DATE NOT NULL,
             skema TEXT NOT NULL,
             nama TEXT NOT NULL,
             nik TEXT NOT NULL,
@@ -76,8 +74,6 @@ def DB_Save_Peserta(peserta: PesertaModel, id_sertifikasi: str):
             INSERT INTO peserta (
                 id_peserta,
                 id_sertifikasi,
-                sertifikasi,
-                tanggal_pelatihan,
                 skema,
                 nama,
                 nik,
@@ -93,12 +89,10 @@ def DB_Save_Peserta(peserta: PesertaModel, id_sertifikasi: str):
                 instansi,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             peserta.nik,              # id_peserta
             id_sertifikasi,           # RELASI KE SERTIFIKASI
-            peserta.sertifikasi,
-            peserta.tanggal_pelatihan,
             peserta.skema,
             peserta.nama,
             peserta.nik,
@@ -136,10 +130,7 @@ def DB_Get_Peserta_By_Sertifikasi(id_sertifikasi: str):
 
     cursor.execute("""
         SELECT 
-            id,
-            id_peserta,
-            sertifikasi,
-            tanggal_pelatihan,
+            id_sertifikasi,
             skema,
             nama,
             nik,
@@ -163,25 +154,23 @@ def DB_Get_Peserta_By_Sertifikasi(id_sertifikasi: str):
 
     peserta_list = []
     for row in rows:
-        peserta_list.append({
-            'id': row[0],
-            'id_peserta': row[1],
-            'sertifikasi': row[2],
-            'tanggal_pelatihan': row[3],
-            'skema': row[4],
-            'nama': row[5],
-            'nik': row[6],
-            'tempat_lahir': row[7],
-            'tanggal_lahir': row[8],
-            'alamat': row[9],
-            'kelurahan': row[10],
-            'kecamatan': row[11],
-            'kabupaten': row[12],
-            'provinsi': row[13],
-            'telepon': row[14],
-            'pendidikan': row[15],
-            'instansi': row[16]
+        peserta = PesertaModel({
+            'id_sertifikasi': row[0],
+            'skema': row[1],
+            'nama': row[2],
+            'nik': row[3],
+            'tempat_lahir': row[4],
+            'tanggal_lahir': row[5],
+            'alamat': row[6],
+            'kelurahan': row[7],
+            'kecamatan': row[8],
+            'kabupaten': row[9],
+            'provinsi': row[10],
+            'telepon': row[11],
+            'pendidikan': row[12],
+            'instansi': row[13]
         })
+        peserta_list.append(peserta)
     
     if DEBUG:
         print(f"[DB] Loaded {len(peserta_list)} peserta for sertifikasi: {id_sertifikasi}")
@@ -219,7 +208,7 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
         # Search dalam sertifikasi tertentu
         cursor.execute("""
             SELECT 
-                id, id_peserta, sertifikasi, tanggal_pelatihan, skema,
+                id, id_peserta, skema,
                 nama, nik, tempat_lahir, tanggal_lahir, alamat,
                 kelurahan, kecamatan, kabupaten, provinsi,
                 telepon, pendidikan, instansi
@@ -236,7 +225,7 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
         # Search global
         cursor.execute("""
             SELECT 
-                id, id_peserta, sertifikasi, tanggal_pelatihan, skema,
+                id, id_peserta, skema,
                 nama, nik, tempat_lahir, tanggal_lahir, alamat,
                 kelurahan, kecamatan, kabupaten, provinsi,
                 telepon, pendidikan, instansi
@@ -253,12 +242,11 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
 
     return [
         {
-            'id': row[0], 'id_peserta': row[1], 'sertifikasi': row[2],
-            'tanggal_pelatihan': row[3], 'skema': row[4], 'nama': row[5],
-            'nik': row[6], 'tempat_lahir': row[7], 'tanggal_lahir': row[8],
-            'alamat': row[9], 'kelurahan': row[10], 'kecamatan': row[11],
-            'kabupaten': row[12], 'provinsi': row[13], 'telepon': row[14],
-            'pendidikan': row[15], 'instansi': row[16]
+            'id': row[0], 'id_peserta': row[1], 'skema': row[2], 'nama': row[3],
+            'nik': row[4], 'tempat_lahir': row[5], 'tanggal_lahir': row[6],
+            'alamat': row[7], 'kelurahan': row[8], 'kecamatan': row[9],
+            'kabupaten': row[10], 'provinsi': row[11], 'telepon': row[12],
+            'pendidikan': row[13], 'instansi': row[14]
         }
         for row in rows
     ]
@@ -319,6 +307,9 @@ def DB_Save_Sertifikasi(id_sertifikasi: str, sertifikasi: str, tanggal: str):
                 created_at
             )
             VALUES (?, ?, ?, ?)
+            ON CONFLICT(id_sertifikasi) DO UPDATE SET
+                sertifikasi = excluded.sertifikasi,
+                tanggal_pelatihan = excluded.tanggal_pelatihan;
         """, (
             id_sertifikasi,
             sertifikasi,
@@ -371,7 +362,7 @@ def DB_Get_All_Sertifikasi():
         })
     
     if DEBUG:
-        print(f"[DB] Loaded {len(data_list)} sertifikasi (without peserta data)")
+        print(f"[DB] Loaded {len(data_list)} sertifikasi")
 
     return data_list
 
@@ -428,7 +419,7 @@ def DB_Update_Sertifikasi(id_sertifikasi: str, sertifikasi: str, tanggal_pelatih
     finally:
         conn.close()
 
-def DB_Delete_Sertifikasi(id_sertifikasi: str, delete_peserta: bool = False):
+def DB_Delete_Sertifikasi(id_sertifikasi: str, delete_peserta: bool = True):
     """
     Hapus sertifikasi
     Jika delete_peserta=True, hapus juga semua peserta terkait

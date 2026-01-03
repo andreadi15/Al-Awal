@@ -3,26 +3,30 @@
 # =======================
 import customtkinter as ctk
 from tkinter import messagebox
+import os
 from datetime import datetime, timedelta
 from pages.tambah_sertifikasi import AddSertifikasiDialog
+from services.export_excel import exportExcel
 from services.database import (
     DB_Get_All_Sertifikasi,
     DB_Get_Peserta_By_Sertifikasi,
+    DB_Delete_Sertifikasi,
     DB_Delete_Peserta_Batch,
     DB_Search_Peserta
 )
-import random
 
 class PesertaPage(ctk.CTkFrame):
-    def __init__(self, parent):
+    def __init__(self, parent, app):
         super().__init__(parent, fg_color="#2a2a2a")
+        self.bind("<Button-1>", lambda e: self.focus_set())
         
+        self.app = app
         # Data dummy
         self.all_sertifikasi = []
         self.peserta_cache = {}
         
         # State management
-        self.selected_ids = set()
+        self.selected_ids = {}
         self.expanded_sections = set()  # Track yang sudah di-expand
         self.search_text = ""
         self.date_filter = "Semua"  # Track filter tanggal
@@ -35,37 +39,17 @@ class PesertaPage(ctk.CTkFrame):
         self.create_widgets()
         self.load_initial_data()
     
-    # def generate_dummy_data(self):
-    #     """Generate dummy data peserta"""
-    #     data = []
-    #     sertifikasi_types = ["BNSP", "CEPU", "IADC"]
-    #     names = ["Ahmad", "Budi", "Citra", "Dewi", "Eko", "Farah", "Gilang", "Hana"]
+    def navigate_to_input_peserta(self, id_sertifikasi):
+        """Navigate dengan mengirim ID"""
+        self.app.show_page("Input Peserta", id_sertifikasi=id_sertifikasi)
         
-    #     # Generate data untuk 3 tanggal berbeda
-    #     base_date = datetime.now()
-    #     for day_offset in range(3):
-    #         date = (base_date - timedelta(days=day_offset)).strftime("%Y-%m-%d")
-            
-    #         # Random 5-15 peserta per tanggal
-    #         num_peserta = random.randint(5, 15)
-    #         for i in range(num_peserta):
-    #             data.append({
-    #                 'id': len(data) + 1,
-    #                 'tanggal': date,
-    #                 'nama': f"{random.choice(names)} {random.choice(['Santoso', 'Wijaya', 'Kusuma', 'Pratama'])}",
-    #                 'sertifikasi': random.choice(sertifikasi_types),
-    #                 'no_peserta': f"P{random.randint(1000, 9999)}",
-    #                 'status': random.choice(['Lulus', 'Tidak Lulus', 'Proses'])
-    #             })
-        
-    #     return data
-   
     def load_initial_data(self):
         """
         Load HANYA data sertifikasi
         Peserta TIDAK diload di sini
         """
         self.all_sertifikasi = DB_Get_All_Sertifikasi()
+        self.update_date_filter_options() 
         self.refresh_display()
         
     def update_date_filter_options(self):
@@ -104,6 +88,7 @@ class PesertaPage(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(self, fg_color="transparent", height=80)
         header_frame.pack(fill="x", padx=20, pady=(20, 10))
         header_frame.pack_propagate(False)
+        header_frame.bind("<Button-1>", lambda e: header_frame.focus_set())
         
         title = ctk.CTkLabel(
             header_frame,
@@ -112,7 +97,8 @@ class PesertaPage(ctk.CTkFrame):
             text_color="#ffffff"
         )
         title.pack(side="left", pady=20)
-        
+        title.bind("<Button-1>", lambda e: title.focus_set())
+
         # Info total sertifikasi
         self.info_label = ctk.CTkLabel(
             header_frame,
@@ -121,12 +107,14 @@ class PesertaPage(ctk.CTkFrame):
             text_color="#9e9e9e"
         )
         self.info_label.pack(side="left", padx=20)
+        self.info_label.bind("<Button-1>", lambda e: self.info_label.focus_set())
     
     def create_controls(self):
         """Create search, filter, and pagination controls"""
         controls_frame = ctk.CTkFrame(self, fg_color="#1f1f1f", height=70)
         controls_frame.pack(fill="x", padx=20, pady=(0, 15))
         controls_frame.pack_propagate(False)
+        controls_frame.bind("<Button-1>", lambda e: controls_frame.focus_set())
         
         # Left side: Search
         search_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
@@ -137,6 +125,7 @@ class PesertaPage(ctk.CTkFrame):
             text="🔍 Cari:",
             font=("Arial", 13)
         ).pack(side="left", padx=(0, 8))
+
         
         self.search_entry = ctk.CTkEntry(
             search_frame,
@@ -175,9 +164,10 @@ class PesertaPage(ctk.CTkFrame):
             values=["Semua"],
             width=150,
             height=35,
-            command=lambda x: self.update_date_filter_options()
+            command=lambda x: self.apply_date_filter(x)
         )
         self.date_combo.set("Semua")
+        self.date_combo.configure(state="readonly")
         self.date_combo.pack(side="left")
                              
         # Refresh button
@@ -193,6 +183,8 @@ class PesertaPage(ctk.CTkFrame):
             command=self.refresh_all
         )
         refresh_btn.pack(side="right", padx=15, pady=15)
+        refresh_btn.bind("<Button-1>", lambda e: refresh_btn.focus_set())
+        
         # Add button
         add_btn = ctk.CTkButton(
             controls_frame,
@@ -207,48 +199,6 @@ class PesertaPage(ctk.CTkFrame):
         )
         add_btn.pack(side="right", pady=15)
         
-        
-        # # Middle: Date filter
-        # date_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
-        # date_frame.pack(side="left", padx=15, pady=10)
-        
-        # ctk.CTkLabel(
-        #     date_frame,
-        #     text="📅 Tanggal:",
-        #     font=("Arial", 13)
-        # ).pack(side="left", padx=(0, 8))
-        
-        # # dates = ["Semua"] + sorted(list(set([d['tanggal'] for d in self.all_data])), reverse=True)
-        # dates = ["Semua"] + sorted(list(set([d['tanggal_pelatihan'] for d in self.all_sertifikasi])), reverse=True)
-        # self.date_combo = ctk.CTkComboBox(
-        #     date_frame,
-        #     values=dates,
-        #     width=150,
-        #     height=35,
-        #     command=lambda x: self.apply_filters()
-        # )
-        # self.date_combo.set("Semua")
-        # self.date_combo.pack(side="left")
-        
-        # # Right side: Rows per page
-        # rows_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
-        # rows_frame.pack(side="right", padx=15, pady=10)
-        
-        # ctk.CTkLabel(
-        #     rows_frame,
-        #     text="📊 Rows:",
-        #     font=("Arial", 13)
-        # ).pack(side="left", padx=(0, 8))
-        
-        # self.rows_combo = ctk.CTkComboBox(
-        #     rows_frame,
-        #     values=["5", "10", "20", "50"],
-        #     width=80,
-        #     height=35,
-        #     command=self.change_rows_per_page
-        # )
-        # self.rows_combo.set(str(self.rows_per_page))
-        # self.rows_combo.pack(side="left")
     
     def create_tables_container(self):
         """Create scrollable container for tables"""
@@ -258,7 +208,21 @@ class PesertaPage(ctk.CTkFrame):
         )
         self.scroll_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
 
-
+    def apply_date_filter(self, selected_value):
+        """Filter sertifikasi berdasarkan tanggal yang dipilih"""
+        self.date_filter = selected_value
+        
+        if selected_value == "Semua":
+            self.filtered_sertifikasi = self.all_sertifikasi
+        else:
+            # Filter berdasarkan tanggal
+            self.filtered_sertifikasi = [
+                s for s in self.all_sertifikasi 
+                if s['tanggal_pelatihan'] == selected_value
+            ]
+        
+        self.refresh_display()
+   
     def refresh_display(self):
         """Refresh display dengan data sertifikasi"""
         # Clear existing
@@ -266,7 +230,10 @@ class PesertaPage(ctk.CTkFrame):
             widget.destroy()
         
         # Use filtered data
-        display_data = self.filtered_sertifikasi
+        if not self.filtered_sertifikasi and self.date_filter == "Semua":
+            display_data = self.all_sertifikasi
+        else:
+            display_data = self.filtered_sertifikasi if self.filtered_sertifikasi else self.all_sertifikasi
         
         # Update info
         total_sertifikasi = len(display_data)
@@ -282,11 +249,11 @@ class PesertaPage(ctk.CTkFrame):
             )
         
         # Create sertifikasi sections
-        if not self.all_sertifikasi:
+        if not display_data:
             self.show_empty_state()
             return
         
-        for sertif in self.all_sertifikasi:
+        for sertif in display_data:
             self.create_sertifikasi_section(sertif)
     
     def show_empty_state(self):
@@ -316,6 +283,7 @@ class PesertaPage(ctk.CTkFrame):
         Peserta belum diload sampai section di-expand
         """
         id_sertifikasi = sertif['id_sertifikasi']
+        tanggal_pelatihan = sertif['tanggal_pelatihan']
         
         # Main container
         section_container = ctk.CTkFrame(
@@ -323,12 +291,13 @@ class PesertaPage(ctk.CTkFrame):
             fg_color="transparent"
         )
         section_container.pack(fill="x", pady=(0, 15))
+        section_container.bind("<Button-1>", lambda e: section_container.focus_set())
         
         # Header (clickable untuk expand/collapse)
         header_frame = ctk.CTkFrame(
             section_container,
             fg_color="#1a73e8",
-            height=60,
+            height=80,
             cursor="hand2"
         )
         header_frame.pack(fill="x")
@@ -337,8 +306,15 @@ class PesertaPage(ctk.CTkFrame):
         # Make header clickable
         header_frame.bind(
             "<Button-1>",
-            lambda e: self.toggle_section(id_sertifikasi, section_container)
+            lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
+        
+        # Configure grid untuk layout horizontal
+        header_frame.grid_columnconfigure(0, weight=0, minsize=50)   # Arrow
+        header_frame.grid_columnconfigure(1, weight=1, minsize=50)  # Nama Sertifikasi
+        header_frame.grid_columnconfigure(2, weight=1, minsize=50)  # Tanggal
+        header_frame.grid_columnconfigure(3, weight=1, minsize=120)  # Jumlah Peserta
+        header_frame.grid_columnconfigure(4, weight=0, minsize=450)
         
         # Arrow icon
         arrow_label = ctk.CTkLabel(
@@ -348,62 +324,119 @@ class PesertaPage(ctk.CTkFrame):
             text_color="white",
             cursor="hand2"
         )
-        arrow_label.pack(side="left", padx=15)
+        arrow_label.grid(row=0, column=0, padx=15, sticky="w")
         arrow_label.bind(
             "<Button-1>",
-            lambda e: self.toggle_section(id_sertifikasi, section_container)
+            lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Sertifikasi info
-        info_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
-        info_frame.pack(side="left", fill="x", expand=True, padx=10)
-        info_frame.bind(
-            "<Button-1>",
-            lambda e: self.toggle_section(id_sertifikasi, section_container)
-        )
-        
-        # Nama sertifikasi
+        # Nama sertifikasi - Column 1
         name_label = ctk.CTkLabel(
-            info_frame,
+            header_frame,
             text=f"📜 {sertif['sertifikasi']}",
             font=("Arial", 16, "bold"),
             text_color="white",
             anchor="w",
             cursor="hand2"
         )
-        name_label.pack(side="left", fill="x", expand=True)
+        name_label.grid(row=0, column=1, padx=10, sticky="w")
         name_label.bind(
             "<Button-1>",
-            lambda e: self.toggle_section(id_sertifikasi, section_container)
+            lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Tanggal
+        # Tanggal - Column 2
         date_label = ctk.CTkLabel(
-            info_frame,
+            header_frame,
             text=f"📅 {sertif['tanggal_pelatihan']}",
-            font=("Arial", 13),
+            font=("Arial", 14, "bold"),
             text_color="#e0e0e0",
             cursor="hand2"
         )
-        date_label.pack(side="left", padx=20)
+        date_label.grid(row=0, column=2, padx=10, sticky="w")
         date_label.bind(
             "<Button-1>",
-            lambda e: self.toggle_section(id_sertifikasi, section_container)
+            lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Jumlah peserta
+        # Jumlah peserta - Column 3
         count_label = ctk.CTkLabel(
-            info_frame,
+            header_frame,
             text=f"👥 {sertif['jumlah_peserta']} peserta",
-            font=("Arial", 13, "bold"),
+            font=("Arial", 14, "bold"),
             text_color="#ffeb3b",
             cursor="hand2"
         )
-        count_label.pack(side="left", padx=10)
+        count_label.grid(row=0, column=3, padx=10, sticky="w")
         count_label.bind(
             "<Button-1>",
-            lambda e: self.toggle_section(id_sertifikasi, section_container)
+            lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
+        
+        # Action Buttons Frame - Column 4
+        actions_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        actions_frame.grid(row=0, column=4, padx=10, sticky="e")
+        
+        # Add Peserta Button
+        add_peserta_btn = ctk.CTkButton(
+            actions_frame,
+            text="➕ Peserta",
+            width=110,
+            height=40,
+            font=("Arial", 12, "bold"),
+            fg_color="#0036a3",
+            hover_color="#0036a3",
+            corner_radius=8,
+            command=lambda: self.navigate_to_input_peserta(id_sertifikasi)  
+        )
+        add_peserta_btn.pack(side="left", padx=3, pady=10)
+        add_peserta_btn.bind("<Button-1>", lambda e: add_peserta_btn.focus_set())
+        
+        # Ekspor Button
+        ekspor_btn = ctk.CTkButton(
+            actions_frame,
+            text="📤 Ekspor",
+            width=100,
+            height=40,
+            font=("Arial", 12, "bold"),
+            fg_color="#017d01",
+            hover_color="#017d01",
+            corner_radius=8,
+            command=lambda: self.export_sertifikasi(id_sertifikasi, tanggal_pelatihan)
+        )
+        
+        ekspor_btn.pack(side="left", padx=3)
+        ekspor_btn.bind("<Button-1>", lambda e: ekspor_btn.focus_set())
+        
+        # Update Button
+        update_btn = ctk.CTkButton(
+            actions_frame,
+            text="✏️ Edit",
+            width=90,
+            height=40,
+            font=("Arial", 12, "bold"),
+            fg_color="#ff9800",
+            hover_color="#f57c00",
+            corner_radius=8,
+            command=lambda: self.show_add_sertifikasi_dialog(sertif)
+        )
+        update_btn.pack(side="left", padx=3)
+        update_btn.bind("<Button-1>", lambda e: update_btn.focus_set())
+        
+        # Delete Button
+        delete_btn = ctk.CTkButton(
+            actions_frame,
+            text="🗑️ Hapus",
+            width=100,
+            height=40,
+            font=("Arial", 12, "bold"),
+            fg_color="#d32f2f",
+            hover_color="#b71c1c",
+            corner_radius=8,
+            command=lambda: self.delete_sertifikasi(id_sertifikasi)
+        )
+        delete_btn.pack(side="left", padx=3)
+        delete_btn.bind("<Button-1>", lambda e: delete_btn.focus_set())
         
         # Content frame (initially hidden)
         content_frame = ctk.CTkFrame(section_container, fg_color="#1f1f1f")
@@ -484,8 +517,8 @@ class PesertaPage(ctk.CTkFrame):
         self.create_table_headers(content_frame)
         
         # Table rows
-        for peserta in peserta_list:
-            self.create_table_row(content_frame, peserta)  
+        for index,peserta in enumerate(peserta_list,start=1):
+            self.create_table_row(content_frame, index, peserta, id_sertifikasi)  
     
     def create_action_panel(self, parent, id_sertifikasi):
         """Create action panel dengan delete button"""
@@ -507,9 +540,10 @@ class PesertaPage(ctk.CTkFrame):
         delete_btn.pack(side="left", padx=15)
         
         # Selected count
+        count = len(self.selected_ids.get(id_sertifikasi, set()))
         count_label = ctk.CTkLabel(
             panel,
-            text=f"Terpilih: {len(self.selected_ids)} item",
+            text=f"Terpilih: {count} item",
             font=("Arial", 13, "bold"),
             text_color="white"
         )
@@ -543,7 +577,7 @@ class PesertaPage(ctk.CTkFrame):
             )
             label.grid(row=0, column=i, padx=10, sticky="w")
             
-    def create_table_row(self, parent, peserta):
+    def create_table_row(self,parent, index, peserta, id_sertifikasi):
         """Create table row untuk satu peserta"""
         row_frame = ctk.CTkFrame(parent, fg_color="#2a2a2a", height=50)
         row_frame.pack(fill="x", padx=10, pady=1)
@@ -559,19 +593,20 @@ class PesertaPage(ctk.CTkFrame):
         
         # Checkbox
         peserta_id = peserta['id']
+        is_selected = peserta_id in self.selected_ids.get(id_sertifikasi, set())
         check_var = ctk.BooleanVar(value=peserta_id in self.selected_ids)
         checkbox = ctk.CTkCheckBox(
             row_frame,
             text="",
             width=30,
             variable=check_var,
-            command=lambda: self.toggle_selection(peserta_id, check_var)
+            command=lambda: self.toggle_selection(peserta_id, check_var, id_sertifikasi)
         )
         checkbox.grid(row=0, column=0, padx=15)
         
         # Data cells
         cells = [
-            str(peserta['id']),
+            index,
             peserta['nama'],
             peserta['nik'],
             peserta['skema'],
@@ -588,28 +623,43 @@ class PesertaPage(ctk.CTkFrame):
             )
             label.grid(row=0, column=i, padx=10, sticky="w")
     
-    def toggle_selection(self, peserta_id, var):
+    def toggle_selection(self, peserta_id, var, id_sertifikasi):
         """Toggle item selection"""
+        for other_id in list(self.selected_ids.keys()):
+            if other_id != id_sertifikasi and self.selected_ids[other_id]:
+                # Ada selection di sertifikasi lain, clear dulu
+                self.selected_ids[other_id].clear()
+                self.update_action_panel(other_id)
+                
+        if id_sertifikasi not in self.selected_ids:
+            self.selected_ids[id_sertifikasi] = set()
+        
         if var.get():
-            self.selected_ids.add(peserta_id)
+            self.selected_ids[id_sertifikasi].add(peserta_id) 
         else:
-            self.selected_ids.discard(peserta_id)
+            self.selected_ids[id_sertifikasi].discard(peserta_id)
         
         # Update action panels
-        self.update_action_panels()
+        self.update_action_panel(id_sertifikasi)
     
-    def update_action_panels(self):
+    def update_action_panel(self, id_sertifikasi):
         """Update semua action panel count"""
         for widget in self.scroll_container.winfo_children():
-            if hasattr(widget, '_content_frame'):
+            if (hasattr(widget, '_id_sertifikasi') and 
+                widget._id_sertifikasi == id_sertifikasi):
                 content = widget._content_frame
                 if hasattr(content, '_count_label'):
+                    # Hitung selected untuk sertifikasi ini saja
+                    count = len(self.selected_ids.get(id_sertifikasi, set()))
                     content._count_label.configure(
-                        text=f"Terpilih: {len(self.selected_ids)} item"
+                        text=f"Terpilih: {count} item"
                     )
+                break
     
     def delete_selected(self, id_sertifikasi):
         """Delete selected peserta"""
+        selected_in_this_sertifikasi = self.selected_ids.get(id_sertifikasi, set())
+        
         if not self.selected_ids:
             messagebox.showinfo("Info", "Tidak ada item yang dipilih!")
             return
@@ -625,7 +675,7 @@ class PesertaPage(ctk.CTkFrame):
                 peserta_list = self.peserta_cache.get(id_sertifikasi, [])
                 nik_list = [
                     p['nik'] for p in peserta_list 
-                    if p['id'] in self.selected_ids
+                    if p['id'] in selected_in_this_sertifikasi
                 ]
                 
                 # Delete from database
@@ -687,6 +737,7 @@ class PesertaPage(ctk.CTkFrame):
         
         # Reload sertifikasi
         self.all_sertifikasi = DB_Get_All_Sertifikasi()
+        self.update_date_filter_options()
         
         # Refresh display
         self.refresh_display()
@@ -699,10 +750,25 @@ class PesertaPage(ctk.CTkFrame):
                     self.toggle_section(id_sertifikasi, widget)
                     break
                 
-    def show_add_sertifikasi_dialog(self):
+    def show_add_sertifikasi_dialog(self, sertif=None):
         """Show custom dialog untuk tambah sertifikasi baru"""
-        AddSertifikasiDialog(self, self.on_sertifikasi_added)
+        if sertif == None:
+            AddSertifikasiDialog(self, self.on_sertifikasi_added)
+        else:
+            AddSertifikasiDialog(self, self.on_sertifikasi_added, sertif)
     
     def on_sertifikasi_added(self):
         """Callback setelah sertifikasi berhasil ditambahkan"""
-        self.refresh_all()            
+        self.refresh_all()
+        
+    def delete_sertifikasi(self, id_sertifikasi):
+        if messagebox.askyesno("Konfirmasi", f"Konfirmasi Untuk Hapus?"):
+            DB_Delete_Sertifikasi(id_sertifikasi,True)
+            self.refresh_all()
+        
+    def export_sertifikasi(self, id_sertifikasi,tanggal_pelatihan: str):
+        peserta = DB_Get_Peserta_By_Sertifikasi(id_sertifikasi)
+        download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+        OUTPUT_DIR = os.path.join(download_dir, "AL-AWAL EXPORT")
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        exportExcel.export_peserta_to_excel(peserta,f"{OUTPUT_DIR}[AWL] Peserta BNSP - {tanggal_pelatihan.replace("/","-")}.xlsx")       

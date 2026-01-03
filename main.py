@@ -133,7 +133,7 @@ class App(ctk.CTk):
         self.content_container = ctk.CTkFrame(self, fg_color="#2a2a2a")
         self.content_container.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
 
-    def show_page(self, page_name):
+    def show_page(self, page_name, id_sertifikasi=None):
         """
         Ganti halaman yang ditampilkan
         - Destroy halaman lama
@@ -160,9 +160,9 @@ class App(ctk.CTk):
         if page_name == "Dashboard":
             page = DashboardPage(self.content_container)
         elif page_name == "Peserta":
-            page = PesertaPage(self.content_container)
+            page = PesertaPage(self.content_container, self)
         elif page_name == "Input Peserta":
-            page = InputPesertaPage(self.content_container)
+            page = InputPesertaPage(self.content_container, id_sertifikasi)
         elif page_name == "Projects":
             page = ProjectsPage(self.content_container)
         elif page_name == "Settings":
