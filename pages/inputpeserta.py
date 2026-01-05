@@ -1,8 +1,8 @@
 import customtkinter as ctk
 from tkinter import messagebox
-import re
+import re, uuid
 from pages.peserta_model import PesertaModel
-from services.database import DB_Save_Peserta,DB_Get_All_Sertifikasi
+from services.database import DB_Save_Peserta,DB_Get_All_Sertifikasi,DB_Get_Peserta_By_Id,DB_Get_Peserta_By_Sertifikasi
 from components import peserta_validator,create_entry,form_row,nik_entry,peserta_list_panel
 from config import SERTIFIKASI_OPTIONS,SKEMA_OPTIONS,PENDIDIKAN_OPTIONS
 
@@ -33,6 +33,20 @@ class InputPesertaPage(ctk.CTkFrame):
         self._build_layout()
         self._build_container_data()
         self._build_form()
+        
+        
+        if self.selected_id_sertifikasi:
+            # Sudah ada ID dari parameter (dipanggil dari tabel peserta)
+            self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
+        else:
+            # Tidak ada ID, ambil dari combo box (default pertama)
+            self._update_selected_id()
+        
+        # Load peserta dari sertifikasi yang dipilih
+        if self.selected_id_sertifikasi:
+            self.load_peserta_from_sertifikasi()
+        
+        # Refresh UI terakhir
         self.refresh_UI_Form()
     
     def _build_layout(self):
@@ -329,6 +343,124 @@ class InputPesertaPage(ctk.CTkFrame):
     def get_All_Sertifikasi(self):
         self.sertifikasi = DB_Get_All_Sertifikasi()
         
+    def load_peserta_from_sertifikasi(self):
+        """Load semua peserta dari sertifikasi yang dipilih"""
+        if not self.selected_id_sertifikasi:
+            return
+        
+        try:
+            # Import function dari database
+            from services.database import DB_Get_Peserta_By_Sertifikasi
+            
+            self.list_peserta = DB_Get_Peserta_By_Sertifikasi(self.selected_id_sertifikasi)
+            
+            # Set current index
+            if len(self.list_peserta) > 0:
+                self.current_index = 0
+                self.load_form(self.list_peserta[0])
+            else:
+                self.current_index = 0
+                self.clear_form()
+                
+            print(f"[INFO] Loaded {len(self.list_peserta)} peserta from database")
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to load peserta: {e}")
+            self.list_peserta = []
+            self.current_index = 0
+            
+    def _compare_data_changes(self):
+        """
+        Membandingkan data saat ini dengan data asli dari database
+        Returns: dict dengan info perubahan
+        """
+        # Get data asli dari database (sudah dalam bentuk PesertaModel)
+        original_list = DB_Get_Peserta_By_Sertifikasi(self.selected_id_sertifikasi)
+        
+        # Convert ke dict untuk mudah compare (key: id_peserta)
+        original_dict = {p.id_peserta: p for p in original_list}
+        current_dict = {p.id_peserta: p for p in self.list_peserta}
+        
+        changes = {
+            'modified': [],      # Data yang diubah
+            'added': [],         # Data baru ditambahkan
+            'deleted': [],       # Data yang dihapus
+            'has_changes': False
+        }
+        
+        # Cek data yang diubah atau ditambah
+        for id_peserta, current_peserta in current_dict.items():
+            if id_peserta in original_dict:
+                # Data sudah ada, cek apakah berubah
+                original = original_dict[id_peserta]
+                
+                # Bandingkan field-field penting
+                if (original.nama != current_peserta.nama or
+                    original.nik != current_peserta.nik or
+                    original.skema != current_peserta.skema or
+                    original.tempat_lahir != current_peserta.tempat_lahir or
+                    original.tanggal_lahir != current_peserta.tanggal_lahir or
+                    original.alamat.strip() != current_peserta.alamat.strip() or
+                    original.kelurahan != current_peserta.kelurahan or
+                    original.kecamatan != current_peserta.kecamatan or
+                    original.kabupaten != current_peserta.kabupaten or
+                    original.provinsi != current_peserta.provinsi or
+                    original.telepon != current_peserta.telepon or
+                    original.pendidikan != current_peserta.pendidikan or
+                    original.instansi != current_peserta.instansi):
+                    
+                    changes['modified'].append(current_peserta.nama)
+                    changes['has_changes'] = True
+            else:
+                # Data baru
+                changes['added'].append(current_peserta.nama)
+                changes['has_changes'] = True
+                
+        # Cek data yang dihapus
+        for id_peserta, original in original_dict.items():
+            if id_peserta not in current_dict:
+                changes['deleted'].append(original.nama)
+                changes['has_changes'] = True
+        
+        return changes
+
+    def _show_changes_dialog(self, changes):
+        """
+        Tampilkan dialog konfirmasi dengan detail perubahan
+        Returns: True jika user klik Ya, False jika Tidak
+        """
+        message_parts = []
+        
+        if changes['modified']:
+            message_parts.append(f"✏️ DATA DIUBAH ({len(changes['modified'])}):")
+            for nama in changes['modified'][:5]:  # Tampilkan max 5
+                message_parts.append(f"  • {nama}")
+            if len(changes['modified']) > 5:
+                message_parts.append(f"  • ... dan {len(changes['modified']) - 5} lainnya")
+            message_parts.append("")
+        
+        if changes['added']:
+            message_parts.append(f"➕ DATA DITAMBAHKAN ({len(changes['added'])}):")
+            for nama in changes['added'][:5]:
+                message_parts.append(f"  • {nama}")
+            if len(changes['added']) > 5:
+                message_parts.append(f"  • ... dan {len(changes['added']) - 5} lainnya")
+            message_parts.append("")
+        
+        if changes['deleted']:
+            message_parts.append(f"🗑️ DATA DIHAPUS ({len(changes['deleted'])}):")
+            for nama in changes['deleted'][:5]:
+                message_parts.append(f"  • {nama}")
+            if len(changes['deleted']) > 5:
+                message_parts.append(f"  • ... dan {len(changes['deleted']) - 5} lainnya")
+            message_parts.append("")
+        
+        message_parts.append("Simpan perubahan dan berganti sertifikasi?")
+        
+        message = "\n".join(message_parts)
+        
+        return messagebox.askyesno("Konfirmasi Perubahan", message)
+
     def _generate_sertifikasi_options(self):
         """Generate options untuk combo box dengan format: 'Sertifikasi Tanggal'"""
         options = []
@@ -355,8 +487,70 @@ class InputPesertaPage(ctk.CTkFrame):
     
     def _on_sertifikasi_change(self, choice):
         """Callback saat combo box sertifikasi berubah"""
+        # Cek apakah ada data peserta
+        if len(self.list_peserta) > 0:
+            try:
+                # Validasi form terakhir dulu
+                peserta = self.collect_form()
+                errors = peserta_validator.PesertaValidator.validate(peserta)
+                
+                if errors:
+                    # Ada error, kembalikan ke sertifikasi sebelumnya
+                    self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
+                    
+                    # Tampilkan error
+                    for key, message in errors.items():
+                        self.entries[key].set_error(message)
+                    first_key = next(iter(errors))
+                    self.scroll_to_widget(self.entries[first_key])
+                    self.form_frame.focus_set()
+                    
+                    messagebox.showwarning(
+                        "Validasi Gagal",
+                        "Harap lengkapi data peserta sebelum berganti sertifikasi!"
+                    )
+                    return
+                # Update peserta terakhir di list
+                if self.current_index < len(self.list_peserta):
+                    self.list_peserta[self.current_index] = peserta
+                else:
+                    self.list_peserta.append(peserta)
+                
+                # 🔥 PERBANDINGAN DATA
+                changes = self._compare_data_changes()
+                
+                if changes['has_changes']:
+                    # Ada perubahan, tampilkan dialog dengan detail
+                    if not self._show_changes_dialog(changes):
+                        # User cancel, kembalikan combo box
+                        self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
+                        return
+                    
+                    # User setuju, simpan semua data
+                    self.simpan_peserta(self.list_peserta)
+                    
+                    messagebox.showinfo(
+                        "Sukses",
+                        f"Berhasil menyimpan perubahan!"
+                    )
+                # else:
+                #     # Tidak ada perubahan, langsung lanjut tanpa pop-up
+                #     pass
+                
+            except Exception as e:
+                print(f"Gagal memproses data: {str(e)}")
+                self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
+                return
+        
+        # Update selected ID
         self._update_selected_id()
         
+        # Load peserta dari sertifikasi baru
+        self.load_peserta_from_sertifikasi()
+        
+        # Refresh UI
+        self.refresh_UI_Form()
+    
     def _update_selected_id(self):
         """Update selected_id_sertifikasi berdasarkan combo box"""
         current_text = self.entries["sertifikasi"].get()
@@ -398,11 +592,14 @@ class InputPesertaPage(ctk.CTkFrame):
             if len(current_digits) >= 8:
                 return "break"
             
-            # Hitung posisi digit untuk insert
+            # 🔥 FIX: Hitung posisi digit untuk insert dengan benar
+            # Hitung separator SEBELUM cursor (tidak termasuk posisi cursor)
             separators_before = current_text[:cursor_pos].count('-')
+            # Posisi digit murni (tanpa separator)
             digit_pos = cursor_pos - separators_before
             
-            # Insert digit di posisi yang benar
+            # 🔥 FIX: Insert digit di posisi cursor yang tepat
+            # Gunakan digit_pos langsung tanpa adjustment
             current_digits = current_digits[:digit_pos] + event.char + current_digits[digit_pos:]
             
         else:
@@ -428,11 +625,20 @@ class InputPesertaPage(ctk.CTkFrame):
             if new_cursor_pos > 0 and new_cursor_pos < len(formatted) and formatted[new_cursor_pos] == '-':
                 new_cursor_pos -= 1
         else:
-            # Setelah insert digit, cursor maju 1 posisi
-            new_cursor_pos = cursor_pos + 1
-            # Skip separator jika auto-inserted
-            if new_cursor_pos < len(formatted) and formatted[new_cursor_pos] == '-':
-                new_cursor_pos += 1
+            # 🔥 FIX: Setelah insert digit, hitung posisi baru dengan benar
+            # digit_pos sudah menunjukkan posisi sebelum insert
+            # Setelah insert, digit baru ada di digit_pos
+            # Cursor harus di digit_pos + 1 (dalam sistem digit murni)
+            new_digit_pos = digit_pos + 1
+            
+            # Konversi kembali ke posisi formatted (dengan separator)
+            # Tambahkan separator yang ada sebelum posisi ini
+            if new_digit_pos > 4:
+                new_cursor_pos = new_digit_pos + 2  # 2 separator: setelah DD dan MM
+            elif new_digit_pos > 2:
+                new_cursor_pos = new_digit_pos + 1  # 1 separator: setelah DD
+            else:
+                new_cursor_pos = new_digit_pos  # belum ada separator
         
         # Set cursor position
         entry.icursor(min(new_cursor_pos, len(formatted)))
@@ -506,22 +712,28 @@ class InputPesertaPage(ctk.CTkFrame):
             pass
 
     def collect_form(self):
+        while True:
+            id_peserta = f"PSRT-{uuid.uuid4().hex[:8].upper()}"
+            if not DB_Get_Peserta_By_Id(id_peserta):
+                break
+            
         """Ambil data dari form saat ini"""        
         return PesertaModel(
+            id_peserta=id_peserta,
             id_sertifikasi=self.selected_id_sertifikasi,
-            skema=self.entries["skema"].get(),
-            nama=self.entries["nama"].get(),
+            skema=self.entries["skema"].get().upper(),
+            nama=self.entries["nama"].get().upper(),
             nik=self.entries["nik"].get_value(),
-            tempat_lahir=self.entries["tempat_lahir"].get(),
+            tempat_lahir=self.entries["tempat_lahir"].get().upper(),
             tanggal_lahir=self.entries["tanggal_lahir"].get(),
-            alamat=self.entries["alamat"].get("1.0","end"),
-            kelurahan=self.entries["kelurahan"].get(),
-            kecamatan=self.entries["kecamatan"].get(),
-            kabupaten=self.entries["kabupaten"].get(),
-            provinsi=self.entries["provinsi"].get(),
+            alamat=self.entries["alamat"].get("1.0","end").upper(),
+            kelurahan=self.entries["kelurahan"].get().upper(),
+            kecamatan=self.entries["kecamatan"].get().upper(),
+            kabupaten=self.entries["kabupaten"].get().upper(),
+            provinsi=self.entries["provinsi"].get().upper(),
             telepon=self.entries["telepon"].get(),
-            pendidikan=self.entries["pendidikan"].get(),
-            instansi=self.entries["instansi"].get()
+            pendidikan=self.entries["pendidikan"].get().upper(),
+            instansi=self.entries["instansi"].get().upper()
         )
  
     def load_form(self, peserta: PesertaModel):
@@ -671,8 +883,7 @@ class InputPesertaPage(ctk.CTkFrame):
                     widget.delete(0, "end")
                 except Exception:
                     pass
-        
-    
+         
     def refresh_UI_Form(self):
         """Update label counter peserta"""
         self.counter_label.configure(text=f"Peserta #{self.current_index + 1}")
@@ -701,13 +912,20 @@ class InputPesertaPage(ctk.CTkFrame):
             )
             self.reset_link.unbind("<Button-1>")
             
-        """Update state sertifikasi combo box"""
+        # """Update state sertifikasi combo box"""
+        # if len(self.list_peserta) >= 1:
+        #     # Disable combo box, jadikan readonly
+        #     self.entries["sertifikasi"].configure(state="disabled")
+        # else:
+        #     # Enable combo box
+        #     self.entries["sertifikasi"].configure(state="readonly")
+            
         if len(self.list_peserta) >= 1:
-            # Disable combo box, jadikan readonly
-            self.entries["sertifikasi"].configure(state="disabled")
+            if not self.data_container_wrapper.winfo_ismapped():
+                self.data_container_wrapper.pack(fill="x", padx=50, pady=(0, 15), after=self.header_label)
         else:
-            # Enable combo box
-            self.entries["sertifikasi"].configure(state="readonly")
+            if self.data_container_wrapper.winfo_ismapped():
+                self.data_container_wrapper.pack_forget()
     
         """Update button data peserta di container"""
         # Hapus semua button lama
@@ -829,6 +1047,7 @@ class InputPesertaPage(ctk.CTkFrame):
         """Simpan semua data peserta"""
         if len(self.sertifikasi) <= 0:
             return
+            
         # Validasi form saat ini terlebih dahulu
         peserta = self.collect_form()
         errors = peserta_validator.PesertaValidator.validate(peserta)
@@ -854,37 +1073,74 @@ class InputPesertaPage(ctk.CTkFrame):
             )
             return
         
+        # 🔥 CEK PERUBAHAN DATA
+        try:
+            changes = self._compare_data_changes()
+            
+            if changes['has_changes']:
+                # Ada perubahan, tampilkan konfirmasi dengan detail
+                if not self._show_changes_dialog(changes):
+                    return  # User cancel
+            else:
+                # Tidak ada perubahan sama sekali
+                messagebox.showinfo(
+                    "Info",
+                    "Tidak ada perubahan data untuk disimpan."
+                )
+                return
+                
+        except Exception as e:
+            # Jika error saat compare (misal data baru semua), langsung tanya
+            if not messagebox.askyesno(
+                "Konfirmasi",
+                f"Simpan {len(self.list_peserta)} peserta?"
+            ):
+                return
+        
         # Panggil fungsi simpan
-        self.simpan_peserta(self.list_peserta)
-        
-        messagebox.showinfo(
-            "Sukses",
-            f"Berhasil menyimpan {len(self.list_peserta)} peserta!"
-        )
-        
-        # Reset semua setelah simpan
-        self.list_peserta = []
-        self.current_index = 0
-        self.clear_form()
-        self.data_container_wrapper.pack_forget()
-        self.refresh_UI_Form()
+        try:
+            self.simpan_peserta(self.list_peserta)
+            
+            messagebox.showinfo(
+                "Sukses",
+                f"Berhasil menyimpan {len(self.list_peserta)} peserta!"
+            )
+            
+            # Reload data dari database
+            self.load_peserta_from_sertifikasi()
+            self.refresh_UI_Form()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Gagal menyimpan data: {str(e)}")
     
     def simpan_peserta(self, list_peserta):
         """
         Fungsi untuk menyimpan semua peserta
+        - Hapus semua peserta lama dari sertifikasi ini
+        - Simpan ulang semua peserta baru
         Parameter: list_peserta (List[PesertaModel])
         """
         print("=" * 50)
         print("MENYIMPAN DATA PESERTA")
         print("=" * 50)
         
-        for i, peserta in enumerate(list_peserta, start=1):
-            print(f"{i}.Saving Data {peserta.nama}")
-            DB_Save_Peserta(peserta, self.selected_id_sertifikasi)
-        
-        print("\n" + "=" * 50)
-        print(f"Total: {len(list_peserta)} peserta")
-        print("=" * 50)
-        
-        # TODO: Implementasi penyimpanan ke database atau file
-        pass
+        try:
+            # Import functions
+            from services.database import DB_Delete_Peserta_By_Sertifikasi
+            
+            # 1. Hapus semua peserta lama dari sertifikasi ini
+            print(f"Menghapus data peserta lama untuk sertifikasi: {self.selected_id_sertifikasi}")
+            DB_Delete_Peserta_By_Sertifikasi(self.selected_id_sertifikasi)
+            
+            # 2. Simpan semua peserta baru
+            for i, peserta in enumerate(list_peserta, start=1):
+                print(f"{i}. Saving Data {peserta.nama}")
+                DB_Save_Peserta(peserta, self.selected_id_sertifikasi)
+            
+            print("\n" + "=" * 50)
+            print(f"Total: {len(list_peserta)} peserta")
+            print("=" * 50)
+            
+        except Exception as e:
+            print(f"[ERROR] Gagal menyimpan peserta: {e}")
+            raise e

@@ -5,6 +5,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 import os
 from datetime import datetime, timedelta
+from pages.peserta_model import PesertaModel
 from pages.tambah_sertifikasi import AddSertifikasiDialog
 from services.export_excel import exportExcel
 from services.database import (
@@ -552,49 +553,68 @@ class PesertaPage(ctk.CTkFrame):
         # Store reference
         parent._action_panel = panel
         parent._count_label = count_label
-        
+    
     def create_table_headers(self, parent):
-        """Create table headers"""
+        """Create table headers dengan fixed width"""
         header_frame = ctk.CTkFrame(parent, fg_color="#333333", height=45)
         header_frame.pack(fill="x", padx=10, pady=(0, 2))
         header_frame.pack_propagate(False)
         
-        # Grid configuration
-        header_frame.grid_columnconfigure(0, weight=0, minsize=50)   # Checkbox
-        header_frame.grid_columnconfigure(1, weight=1, minsize=60)   # No
-        header_frame.grid_columnconfigure(2, weight=3, minsize=200)  # Nama
-        header_frame.grid_columnconfigure(3, weight=2, minsize=150)  # NIK
-        header_frame.grid_columnconfigure(4, weight=2, minsize=120)  # Skema
-        header_frame.grid_columnconfigure(5, weight=2, minsize=120)  # Instansi
+        # Grid configuration dengan fixed width
+        header_frame.grid_columnconfigure(0, weight=0, minsize=65)   # Checkbox
+        header_frame.grid_columnconfigure(1, weight=0, minsize=50)   # No
+        header_frame.grid_columnconfigure(2, weight=0, minsize=180)  # Nama
+        header_frame.grid_columnconfigure(3, weight=0, minsize=150)  # Instansi
+        header_frame.grid_columnconfigure(4, weight=0, minsize=100)  # Skema
+        header_frame.grid_columnconfigure(5, weight=0, minsize=190)  # NIK
+        header_frame.grid_columnconfigure(6, weight=0, minsize=190)  # Tempat/Tgl Lahir
+        header_frame.grid_columnconfigure(7, weight=0, minsize=300)  # Alamat
+        header_frame.grid_columnconfigure(8, weight=0, minsize=110)  # No HP
+        header_frame.grid_columnconfigure(9, weight=0, minsize=100)  # Pendidikan
         
-        headers = ["☑", "No", "Nama Peserta", "NIK", "Skema", "Instansi"]
-        for i, header in enumerate(headers):
+        headers = [
+            ("   ☑", 0),
+            ("No", 1),
+            ("Nama Peserta", 2),
+            ("Instansi", 3),
+            ("Skema", 4),
+            ("NIK", 5),
+            ("Tempat/Tgl Lahir", 6),
+            ("Alamat", 7),
+            ("No HP", 8),
+            ("Pendidikan", 9)
+        ]
+        
+        for header_text, col_index in headers:
             label = ctk.CTkLabel(
                 header_frame,
-                text=header,
+                text=header_text,
                 font=("Arial", 13, "bold"),
-                text_color="#ffffff"
+                text_color="#ffffff",
+                anchor="w"
             )
-            label.grid(row=0, column=i, padx=10, sticky="w")
+            label.grid(row=0, column=col_index, padx=5, sticky="w")
             
-    def create_table_row(self,parent, index, peserta, id_sertifikasi):
-        """Create table row untuk satu peserta"""
-        row_frame = ctk.CTkFrame(parent, fg_color="#2a2a2a", height=50)
+    def create_table_row(self, parent, index, peserta: PesertaModel, id_sertifikasi):
+        """Create table row dengan fixed width dan text wrapping"""
+        row_frame = ctk.CTkFrame(parent, fg_color="#2a2a2a")
         row_frame.pack(fill="x", padx=10, pady=1)
-        row_frame.pack_propagate(False)
         
-        # Grid configuration
+        # Grid configuration - SAMA dengan header
         row_frame.grid_columnconfigure(0, weight=0, minsize=50)
-        row_frame.grid_columnconfigure(1, weight=1, minsize=60)
-        row_frame.grid_columnconfigure(2, weight=3, minsize=200)
-        row_frame.grid_columnconfigure(3, weight=2, minsize=150)
-        row_frame.grid_columnconfigure(4, weight=2, minsize=120)
-        row_frame.grid_columnconfigure(5, weight=2, minsize=120)
+        row_frame.grid_columnconfigure(1, weight=0, minsize=50)
+        row_frame.grid_columnconfigure(2, weight=0, minsize=180)
+        row_frame.grid_columnconfigure(3, weight=0, minsize=150)
+        row_frame.grid_columnconfigure(4, weight=0, minsize=100)
+        row_frame.grid_columnconfigure(5, weight=0, minsize=190)
+        row_frame.grid_columnconfigure(6, weight=0, minsize=190)
+        row_frame.grid_columnconfigure(7, weight=0, minsize=300)
+        row_frame.grid_columnconfigure(8, weight=0, minsize=110)
+        row_frame.grid_columnconfigure(9, weight=0, minsize=100)
         
         # Checkbox
-        peserta_id = peserta['id']
-        is_selected = peserta_id in self.selected_ids.get(id_sertifikasi, set())
-        check_var = ctk.BooleanVar(value=peserta_id in self.selected_ids)
+        peserta_id = peserta.id_peserta
+        check_var = ctk.BooleanVar(value=peserta_id in self.selected_ids.get(id_sertifikasi, set()))
         checkbox = ctk.CTkCheckBox(
             row_frame,
             text="",
@@ -602,27 +622,46 @@ class PesertaPage(ctk.CTkFrame):
             variable=check_var,
             command=lambda: self.toggle_selection(peserta_id, check_var, id_sertifikasi)
         )
-        checkbox.grid(row=0, column=0, padx=15)
+        checkbox.grid(row=0, column=0, padx=10, pady=5, sticky="w")
         
-        # Data cells
-        cells = [
-            index,
-            peserta['nama'],
-            peserta['nik'],
-            peserta['skema'],
-            peserta['instansi']
+        cells_config = [
+            (str(index), 1, 12, 0),
+
+            (peserta.nama, 2, 12, 150),        # 180 - 30
+            (peserta.instansi, 3, 12, 120),    # 150 - 30
+            (peserta.skema, 4, 12, 70),        # 100 - 30
+
+            (peserta.nik[:16] if peserta.nik else "", 5, 12, 0),
+
+            (
+                exportExcel.format_tempat_tanggal(
+                    peserta.tempat_lahir, peserta.tanggal_lahir
+                ),
+                6, 12, 160                     # 190 - 30
+            ),
+
+            (exportExcel.format_alamat(peserta, 0), 7, 12, 200),  # 🔥 300 - 30
+
+            (peserta.telepon, 8, 12, 0),
+            (peserta.pendidikan, 9, 12, 70),   # 100 - 30
         ]
+
         
-        for i, cell in enumerate(cells, start=1):
+        for cell_text, col_index, font_size, wrap_length in cells_config:
+            # Pastikan cell_text tidak None
+            display_text = str(cell_text) if cell_text else ""
+            
             label = ctk.CTkLabel(
                 row_frame,
-                text=cell,
-                font=("Arial", 12),
+                text=display_text,
+                font=("Arial", font_size),
                 text_color="#ffffff",
-                anchor="w"
+                anchor="nw",  # north-west untuk top-left alignment
+                justify="left",
+                wraplength=wrap_length  # Text akan wrap otomatis
             )
-            label.grid(row=0, column=i, padx=10, sticky="w")
-    
+            label.grid(row=0, column=col_index, padx=5, pady=5, sticky="nw")
+            
     def toggle_selection(self, peserta_id, var, id_sertifikasi):
         """Toggle item selection"""
         for other_id in list(self.selected_ids.keys()):

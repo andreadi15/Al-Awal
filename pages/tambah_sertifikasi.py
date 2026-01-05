@@ -314,7 +314,7 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
             )
             
             # Format tanggal untuk display (DD-MM-YYYY)
-            display_date = datetime.strptime(tanggal_pelatihan, "%Y-%m-%d").strftime("%d-%m-%Y")
+            # display_date = datetime.strptime(tanggal_pelatihan, "%Y-%m-%d").strftime("%d-%m-%Y")
             
             # # Show success
             # self.show_success(

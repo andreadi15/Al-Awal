@@ -2,41 +2,7 @@
 from openpyxl import Workbook
 from pages.peserta_model import PesertaModel
 
-class exportExcel():
-    
-    def __init__(self):
-        self.KOTA_LIST = [
-            # Sumatra
-            "Banda Aceh", "Langsa", "Lhokseumawe", "Meulaboh", "Sabang", "Subulussalam", 
-            "Binjai", "Gunungsitoli", "Medan", "Padangsidimpuan", "Pematangsiantar", 
-            "Sibolga", "Tanjungbalai", "Tebing Tinggi", "Bukittinggi", "Padang", 
-            "Padang Panjang", "Pariaman", "Payakumbuh", "Sawahlunto", "Solok", 
-            "Dumai", "Pekanbaru", "Batam", "Tanjungpinang", "Jambi", "Sungaipenuh", 
-            "Bengkulu", "Lubuklinggau", "Pagar Alam", "Palembang", "Prabumulih", 
-            "Pangkalpinang", "Bandar Lampung", "Metro",
-
-            # Jawa
-            "Tangerang", "Tangerang Selatan", "Cilegon", "Serang", "Jakarta Pusat", 
-            "Jakarta Barat", "Jakarta Timur", "Jakarta Utara", "Jakarta Selatan", 
-            "Bandung", "Bekasi", "Bogor", "Cimahi", "Cirebon", "Depok", "Sukabumi", 
-            "Tasikmalaya", "Banjar", "Magelang", "Pekalongan", "Salatiga", "Semarang", 
-            "Surakarta", "Tegal", "Batu", "Blitar", "Kediri", "Madiun", "Malang", 
-            "Mojokerto", "Pasuruan", "Probolinggo", "Surabaya", "Yogyakarta",
-
-            # Kalimantan
-            "Pontianak", "Singkawang", "Banjarbaru", "Banjarmasin", "Palangka Raya", 
-            "Balikpapan", "Bontang", "Samarinda", "Nusantara", "Tarakan",
-
-            # Sulawesi
-            "Bitung", "Kotamobagu", "Manado", "Tomohon", "Palu", "Makassar", "Palopo", 
-            "Parepare", "Baubau", "Kendari", "Gorontalo",
-
-            # Bali & Nusa Tenggara
-            "Denpasar", "Bima", "Mataram", "Kupang",
-
-            # Maluku & Papua
-            "Ambon", "Tual", "Ternate", "Tidore Kepulauan", "Jayapura", "Sorong"
-        ]
+class exportExcel(): 
                 
     def export_peserta_to_excel(self,peserta_list, file_path):
         wb = Workbook()
@@ -71,7 +37,7 @@ class exportExcel():
                 p.skema,
                 p.nik,
                 self.format_tempat_tanggal(p.tempat_lahir, p.tanggal_lahir),
-                self.format_alamat(p),
+                self.format_alamat(p, 1),
                 self.format_telepon(p.telepon),
                 p.pendidikan,
                 p.instansi,
@@ -89,23 +55,66 @@ class exportExcel():
 
         wb.save(file_path)
 
-
-    def format_tempat_tanggal(self,tempat, tanggal):
+    @staticmethod
+    def format_tempat_tanggal(tempat, tanggal):
         if not tempat and not tanggal:
             return ""
         return f"{tempat}, {tanggal}"
 
+    @staticmethod
+    def format_alamat(p: PesertaModel, ops: int = 0):
+        KOTA_LIST = [
+            # Sumatra
+            "Banda Aceh", "Langsa", "Lhokseumawe", "Meulaboh", "Sabang", "Subulussalam", 
+            "Binjai", "Gunungsitoli", "Medan", "Padangsidimpuan", "Pematangsiantar", 
+            "Sibolga", "Tanjungbalai", "Tebing Tinggi", "Bukittinggi", "Padang", 
+            "Padang Panjang", "Pariaman", "Payakumbuh", "Sawahlunto", "Solok", 
+            "Dumai", "Pekanbaru", "Batam", "Tanjungpinang", "Jambi", "Sungaipenuh", 
+            "Bengkulu", "Lubuklinggau", "Pagar Alam", "Palembang", "Prabumulih", 
+            "Pangkalpinang", "Bandar Lampung", "Metro",
 
-    def format_alamat(self,p: PesertaModel):
-        prefix = "KOTA" if p.kabupaten.lower() in self.KOTA_LIST else "KAB."
+            # Jawa
+            "Tangerang", "Tangerang Selatan", "Cilegon", "Serang", "Jakarta Pusat", 
+            "Jakarta Barat", "Jakarta Timur", "Jakarta Utara", "Jakarta Selatan", 
+            "Bandung", "Bekasi", "Bogor", "Cimahi", "Cirebon", "Depok", "Sukabumi", 
+            "Tasikmalaya", "Banjar", "Magelang", "Pekalongan", "Salatiga", "Semarang", 
+            "Surakarta", "Tegal", "Batu", "Blitar", "Kediri", "Madiun", "Malang", 
+            "Mojokerto", "Pasuruan", "Probolinggo", "Surabaya", "Yogyakarta",
 
-        return (
-            f"{p.alamat}, "
-            f"KEL. {p.kelurahan}, "
-            f"KEC. {p.kecamatan}, "
-            f"{prefix.upper()} {p.kabupaten}, "
-            f"{p.provinsi}"
-        )
+            # Kalimantan
+            "Pontianak", "Singkawang", "Banjarbaru", "Banjarmasin", "Palangka Raya", 
+            "Balikpapan", "Bontang", "Samarinda", "Nusantara", "Tarakan",
+
+            # Sulawesi
+            "Bitung", "Kotamobagu", "Manado", "Tomohon", "Palu", "Makassar", "Palopo", 
+            "Parepare", "Baubau", "Kendari", "Gorontalo",
+
+            # Bali & Nusa Tenggara
+            "Denpasar", "Bima", "Mataram", "Kupang",
+
+            # Maluku & Papua
+            "Ambon", "Tual", "Ternate", "Tidore Kepulauan", "Jayapura", "Sorong"
+        ]
+        
+        prefix = "KOTA" if p.kabupaten.lower() in KOTA_LIST else "KAB."
+        if ops == 0:
+            alamat = (
+                f"{p.alamat} "
+                f"KEL. {p.kelurahan}, "
+                f"KEC. {p.kecamatan}, "
+                f"{prefix.upper()} {p.kabupaten}, "
+                f"{p.provinsi}"
+            )
+        else:
+            alamat = (
+                f"{p.alamat}, "
+                f"KEL. {p.kelurahan}, "
+                f"KEC. {p.kecamatan}, "
+                f"{prefix.upper()} {p.kabupaten}, "
+                f"{p.provinsi}"
+            )
+            
+        return alamat
 
 
     def format_telepon(self, nomor: str):

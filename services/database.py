@@ -91,7 +91,7 @@ def DB_Save_Peserta(peserta: PesertaModel, id_sertifikasi: str):
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            peserta.nik,              # id_peserta
+            peserta.id_peserta,              # id_peserta
             id_sertifikasi,           # RELASI KE SERTIFIKASI
             peserta.skema,
             peserta.nama,
@@ -130,6 +130,7 @@ def DB_Get_Peserta_By_Sertifikasi(id_sertifikasi: str):
 
     cursor.execute("""
         SELECT 
+            id_peserta,
             id_sertifikasi,
             skema,
             nama,
@@ -154,22 +155,23 @@ def DB_Get_Peserta_By_Sertifikasi(id_sertifikasi: str):
 
     peserta_list = []
     for row in rows:
-        peserta = PesertaModel({
-            'id_sertifikasi': row[0],
-            'skema': row[1],
-            'nama': row[2],
-            'nik': row[3],
-            'tempat_lahir': row[4],
-            'tanggal_lahir': row[5],
-            'alamat': row[6],
-            'kelurahan': row[7],
-            'kecamatan': row[8],
-            'kabupaten': row[9],
-            'provinsi': row[10],
-            'telepon': row[11],
-            'pendidikan': row[12],
-            'instansi': row[13]
-        })
+        peserta = PesertaModel(
+            id_peserta = row[0],
+            id_sertifikasi = row[1],
+            skema = row[2],
+            nama = row[3],
+            nik = row[4],
+            tempat_lahir = row[5],
+            tanggal_lahir = row[6],
+            alamat = row[7],
+            kelurahan = row[8],
+            kecamatan = row[9],
+            kabupaten = row[10],
+            provinsi = row[11],
+            telepon = row[12],
+            pendidikan = row[13],
+            instansi = row[14]
+        )
         peserta_list.append(peserta)
     
     if DEBUG:
@@ -208,7 +210,7 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
         # Search dalam sertifikasi tertentu
         cursor.execute("""
             SELECT 
-                id, id_peserta, skema,
+                id, id_peserta, id_sertifikasi, skema,
                 nama, nik, tempat_lahir, tanggal_lahir, alamat,
                 kelurahan, kecamatan, kabupaten, provinsi,
                 telepon, pendidikan, instansi
@@ -225,7 +227,7 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
         # Search global
         cursor.execute("""
             SELECT 
-                id, id_peserta, skema,
+                id, id_peserta, id_sertifikasi, skema,
                 nama, nik, tempat_lahir, tanggal_lahir, alamat,
                 kelurahan, kecamatan, kabupaten, provinsi,
                 telepon, pendidikan, instansi
@@ -242,41 +244,65 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
 
     return [
         {
-            'id': row[0], 'id_peserta': row[1], 'skema': row[2], 'nama': row[3],
-            'nik': row[4], 'tempat_lahir': row[5], 'tanggal_lahir': row[6],
-            'alamat': row[7], 'kelurahan': row[8], 'kecamatan': row[9],
-            'kabupaten': row[10], 'provinsi': row[11], 'telepon': row[12],
-            'pendidikan': row[13], 'instansi': row[14]
+            'id': row[0], 'id_peserta': row[1], 'id_sertifikasi': row[2], 'skema': row[3], 'nama': row[4],
+            'nik': row[5], 'tempat_lahir': row[6], 'tanggal_lahir': row[7],
+            'alamat': row[8], 'kelurahan': row[9], 'kecamatan': row[10],
+            'kabupaten': row[11], 'provinsi': row[12], 'telepon': row[13],
+            'pendidikan': row[14], 'instansi': row[15]
         }
         for row in rows
     ]
 
-def DB_Delete_Peserta(nik: str):
+def DB_Delete_Peserta_By_Sertifikasi(id_sertifikasi):
+    """Delete semua peserta dari sertifikasi tertentu"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            DELETE FROM peserta 
+            WHERE id_sertifikasi = ?
+        """, (id_sertifikasi,))
+        
+        deleted = cursor.rowcount
+        conn.commit()
+        
+        print(f"[INFO] Deleted {deleted} peserta from sertifikasi {id_sertifikasi}")
+        return deleted
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERROR] Failed to delete peserta: {e}")
+        raise e
+    finally:
+        conn.close()
+        
+def DB_Delete_Peserta(id_peserta: str):
     """Hapus peserta berdasarkan NIK"""
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM peserta WHERE nik = ?", (nik,))
+    cursor.execute("DELETE FROM peserta WHERE id_peserta = ?", (id_peserta,))
     deleted = cursor.rowcount > 0
     
     conn.commit()
     conn.close()
     
     if DEBUG and deleted:
-        print(f"[DB] Peserta deleted: NIK {nik}")
+        print(f"[DB] Peserta deleted: ID Peserta {id_peserta}")
     
     return deleted
 
-def DB_Delete_Peserta_Batch(nik_list: list):
+def DB_Delete_Peserta_Batch(id_peserta_list: list):
     """Hapus banyak peserta sekaligus (optimized)"""
-    if not nik_list:
+    if not id_peserta_list:
         return 0
     
     conn = get_connection()
     cursor = conn.cursor()
     
-    placeholders = ','.join(['?'] * len(nik_list))
-    cursor.execute(f"DELETE FROM peserta WHERE nik IN ({placeholders})", nik_list)
+    placeholders = ','.join(['?'] * len(id_peserta_list))
+    cursor.execute(f"DELETE FROM peserta WHERE nik IN ({placeholders})", id_peserta_list)
     
     deleted_count = cursor.rowcount
     conn.commit()
@@ -287,6 +313,65 @@ def DB_Delete_Peserta_Batch(nik_list: list):
     
     return deleted_count
 
+def DB_Get_Peserta_By_Id(id_peserta: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT 
+                id_peserta,
+                id_sertifikasi,
+                skema,
+                nama,
+                nik,
+                tempat_lahir,
+                tanggal_lahir,
+                alamat,
+                kelurahan,
+                kecamatan,
+                kabupaten,
+                provinsi,
+                telepon,
+                pendidikan,
+                instansi
+            FROM peserta
+            WHERE id_peserta = ?
+            LIMIT 1
+        """, (id_peserta,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        peserta = PesertaModel(
+            id_peserta=row[0],
+            id_sertifikasi=row[1],
+            skema=row[2],
+            nama=row[3],
+            nik=row[4],
+            tempat_lahir=row[5],
+            tanggal_lahir=row[6],
+            alamat=row[7],
+            kelurahan=row[8],
+            kecamatan=row[9],
+            kabupaten=row[10],
+            provinsi=row[11],
+            telepon=row[12],
+            pendidikan=row[13],
+            instansi=row[14]
+        )
+
+        if DEBUG:
+            print(f"[DB] Loaded peserta: {id_peserta}")
+
+        return peserta
+
+    finally:
+        conn.close()
+    
+     
 # =========== [END] Peserta ============== 
 
 
