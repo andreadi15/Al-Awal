@@ -6,7 +6,7 @@ from openpyxl.styles import Border, Side, Font, Alignment, PatternFill
 from copy import copy
 import re
 
-class ExcelTemplateExporter:
+class export_Rekap_BNSP:
     """
     Export data ke Excel menggunakan sistem template + placeholder.
     
@@ -80,6 +80,19 @@ class ExcelTemplateExporter:
             
             # Save workbook
             self.wb.save(output_path)
+            
+            import win32com.client as win32
+
+            excel = win32.DispatchEx("Excel.Application")  # PENTING
+            excel.Visible = False
+
+            wb = excel.Workbooks.Open(output_path)
+            ws = wb.ActiveSheet
+            ws.Rows.AutoFit()
+
+            wb.Save()
+            wb.Close(False)
+            excel.Quit()
             print(f"[SUCCESS] File berhasil disimpan: {output_path}")
             print(f"[INFO] Total data: {len(data_list)} baris")
             return True
@@ -228,15 +241,15 @@ class ExcelTemplateExporter:
             return Border()
         
         return Border(
-            left=ExcelTemplateExporter._copy_side(border.left),
-            right=ExcelTemplateExporter._copy_side(border.right),
-            top=ExcelTemplateExporter._copy_side(border.top),
-            bottom=ExcelTemplateExporter._copy_side(border.bottom),
-            diagonal=ExcelTemplateExporter._copy_side(border.diagonal),
+            left=export_Rekap_BNSP._copy_side(border.left),
+            right=export_Rekap_BNSP._copy_side(border.right),
+            top=export_Rekap_BNSP._copy_side(border.top),
+            bottom=export_Rekap_BNSP._copy_side(border.bottom),
+            diagonal=export_Rekap_BNSP._copy_side(border.diagonal),
             diagonal_direction=border.diagonal_direction,
             outline=border.outline,
-            vertical=ExcelTemplateExporter._copy_side(border.vertical),
-            horizontal=ExcelTemplateExporter._copy_side(border.horizontal)
+            vertical=export_Rekap_BNSP._copy_side(border.vertical),
+            horizontal=export_Rekap_BNSP._copy_side(border.horizontal)
         )
     
     @staticmethod
