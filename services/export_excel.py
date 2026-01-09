@@ -37,7 +37,7 @@ class exportExcel():
                 p.skema,
                 p.nik,
                 self.format_tempat_tanggal(p.tempat_lahir, p.tanggal_lahir),
-                self.format_alamat(p, 1),
+                self.format_alamat(p),
                 self.format_telepon(p.telepon),
                 p.pendidikan,
                 p.instansi,
@@ -62,7 +62,7 @@ class exportExcel():
         return f"{tempat}, {tanggal}"
 
     @staticmethod
-    def format_alamat(p: PesertaModel, ops: int = 0):
+    def format_alamat(p: PesertaModel):
         KOTA_LIST = [
             # Sumatra
             "Banda Aceh", "Langsa", "Lhokseumawe", "Meulaboh", "Sabang", "Subulussalam", 
@@ -95,24 +95,17 @@ class exportExcel():
             # Maluku & Papua
             "Ambon", "Tual", "Ternate", "Tidore Kepulauan", "Jayapura", "Sorong"
         ]
-        
+        if not p.alamat or not p.kelurahan or not p.kecamatan or not p.kabupaten or not p.provinsi:
+            return ""
         prefix = "KOTA" if p.kabupaten.lower() in KOTA_LIST else "KAB."
-        if ops == 0:
-            alamat = (
-                f"{p.alamat} "
-                f"KEL. {p.kelurahan}, "
-                f"KEC. {p.kecamatan}, "
-                f"{prefix.upper()} {p.kabupaten}, "
-                f"{p.provinsi}"
-            )
-        else:
-            alamat = (
-                f"{p.alamat}, "
-                f"KEL. {p.kelurahan}, "
-                f"KEC. {p.kecamatan}, "
-                f"{prefix.upper()} {p.kabupaten}, "
-                f"{p.provinsi}"
-            )
+    
+        alamat = (
+            f"{p.alamat}, "
+            f"KEL. {p.kelurahan}, "
+            f"KEC. {p.kecamatan}, "
+            f"{prefix.upper()} {p.kabupaten}, "
+            f"{p.provinsi}"
+        )
             
         return alamat
 
@@ -120,3 +113,8 @@ class exportExcel():
     def format_telepon(self, nomor: str):
         nomor = nomor.replace("-", "").replace(" ", "")
         return "-".join(nomor[i:i+4] for i in range(0, len(nomor), 4))
+    
+    
+    
+
+

@@ -393,51 +393,50 @@ class PesertaPage(ctk.CTkFrame):
         add_peserta_btn.pack(side="left", padx=3, pady=10)
         add_peserta_btn.bind("<Button-1>", lambda e: add_peserta_btn.focus_set())
         
-        # Ekspor Button
-        ekspor_btn = ctk.CTkButton(
+        # 🔥 MENU DROPDOWN (Titik 3)
+        menu_btn = ctk.CTkButton(
             actions_frame,
-            text="📤 Ekspor",
-            width=100,
+            text="⋮",
+            width=50,
             height=40,
-            font=("Arial", 12, "bold"),
-            fg_color="#017d01",
-            hover_color="#017d01",
+            font=("Arial", 20, "bold"),
+            fg_color="#666666",
+            hover_color="#555555",
             corner_radius=8,
-            command=lambda: self.export_sertifikasi(id_sertifikasi, tanggal_pelatihan)
+            command=lambda: self.show_menu_dropdown(id_sertifikasi, tanggal_pelatihan, menu_btn)
         )
+        menu_btn.pack(side="left", padx=3)
+        menu_btn.bind("<Button-1>", lambda e: menu_btn.focus_set())
         
-        ekspor_btn.pack(side="left", padx=3)
-        ekspor_btn.bind("<Button-1>", lambda e: ekspor_btn.focus_set())
+        # # Update Button
+        # update_btn = ctk.CTkButton(
+        #     actions_frame,
+        #     text="✏️ Edit",
+        #     width=90,
+        #     height=40,
+        #     font=("Arial", 12, "bold"),
+        #     fg_color="#ff9800",
+        #     hover_color="#f57c00",
+        #     corner_radius=8,
+        #     command=lambda: self.show_add_sertifikasi_dialog(sertif)
+        # )
+        # update_btn.pack(side="left", padx=3)
+        # update_btn.bind("<Button-1>", lambda e: update_btn.focus_set())
         
-        # Update Button
-        update_btn = ctk.CTkButton(
-            actions_frame,
-            text="✏️ Edit",
-            width=90,
-            height=40,
-            font=("Arial", 12, "bold"),
-            fg_color="#ff9800",
-            hover_color="#f57c00",
-            corner_radius=8,
-            command=lambda: self.show_add_sertifikasi_dialog(sertif)
-        )
-        update_btn.pack(side="left", padx=3)
-        update_btn.bind("<Button-1>", lambda e: update_btn.focus_set())
-        
-        # Delete Button
-        delete_btn = ctk.CTkButton(
-            actions_frame,
-            text="🗑️ Hapus",
-            width=100,
-            height=40,
-            font=("Arial", 12, "bold"),
-            fg_color="#d32f2f",
-            hover_color="#b71c1c",
-            corner_radius=8,
-            command=lambda: self.delete_sertifikasi(id_sertifikasi)
-        )
-        delete_btn.pack(side="left", padx=3)
-        delete_btn.bind("<Button-1>", lambda e: delete_btn.focus_set())
+        # # Delete Button
+        # delete_btn = ctk.CTkButton(
+        #     actions_frame,
+        #     text="🗑️ Hapus",
+        #     width=100,
+        #     height=40,
+        #     font=("Arial", 12, "bold"),
+        #     fg_color="#d32f2f",
+        #     hover_color="#b71c1c",
+        #     corner_radius=8,
+        #     command=lambda: self.delete_sertifikasi(id_sertifikasi)
+        # )
+        # delete_btn.pack(side="left", padx=3)
+        # delete_btn.bind("<Button-1>", lambda e: delete_btn.focus_set())
         
         # Content frame (initially hidden)
         content_frame = ctk.CTkFrame(section_container, fg_color="#1f1f1f")
@@ -565,11 +564,11 @@ class PesertaPage(ctk.CTkFrame):
         header_frame.grid_columnconfigure(1, weight=0, minsize=50)   # No
         header_frame.grid_columnconfigure(2, weight=0, minsize=180)  # Nama
         header_frame.grid_columnconfigure(3, weight=0, minsize=150)  # Instansi
-        header_frame.grid_columnconfigure(4, weight=0, minsize=100)  # Skema
-        header_frame.grid_columnconfigure(5, weight=0, minsize=190)  # NIK
+        header_frame.grid_columnconfigure(4, weight=0, minsize=180)  # Skema
+        header_frame.grid_columnconfigure(5, weight=0, minsize=160)  # NIK
         header_frame.grid_columnconfigure(6, weight=0, minsize=190)  # Tempat/Tgl Lahir
-        header_frame.grid_columnconfigure(7, weight=0, minsize=300)  # Alamat
-        header_frame.grid_columnconfigure(8, weight=0, minsize=110)  # No HP
+        header_frame.grid_columnconfigure(7, weight=0, minsize=270)  # Alamat
+        header_frame.grid_columnconfigure(8, weight=0, minsize=125)  # No HP
         header_frame.grid_columnconfigure(9, weight=0, minsize=100)  # Pendidikan
         
         headers = [
@@ -605,11 +604,11 @@ class PesertaPage(ctk.CTkFrame):
         row_frame.grid_columnconfigure(1, weight=0, minsize=50)
         row_frame.grid_columnconfigure(2, weight=0, minsize=180)
         row_frame.grid_columnconfigure(3, weight=0, minsize=150)
-        row_frame.grid_columnconfigure(4, weight=0, minsize=100)
-        row_frame.grid_columnconfigure(5, weight=0, minsize=190)
+        row_frame.grid_columnconfigure(4, weight=0, minsize=180)
+        row_frame.grid_columnconfigure(5, weight=0, minsize=160)
         row_frame.grid_columnconfigure(6, weight=0, minsize=190)
-        row_frame.grid_columnconfigure(7, weight=0, minsize=300)
-        row_frame.grid_columnconfigure(8, weight=0, minsize=110)
+        row_frame.grid_columnconfigure(7, weight=0, minsize=270)
+        row_frame.grid_columnconfigure(8, weight=0, minsize=125)
         row_frame.grid_columnconfigure(9, weight=0, minsize=100)
         
         # Checkbox
@@ -626,22 +625,12 @@ class PesertaPage(ctk.CTkFrame):
         
         cells_config = [
             (str(index), 1, 12, 0),
-
-            (peserta.nama, 2, 12, 150),        # 180 - 30
-            (peserta.instansi, 3, 12, 120),    # 150 - 30
-            (peserta.skema, 4, 12, 70),        # 100 - 30
-
+            (peserta.nama, 2, 12, 135),        # 180 - 45
+            (peserta.instansi, 3, 12, 105),    # 150 - 45
+            (peserta.skema, 4, 12, 135),        # 180 - 45
             (peserta.nik[:16] if peserta.nik else "", 5, 12, 0),
-
-            (
-                exportExcel.format_tempat_tanggal(
-                    peserta.tempat_lahir, peserta.tanggal_lahir
-                ),
-                6, 12, 160                     # 190 - 30
-            ),
-
-            (exportExcel.format_alamat(peserta, 0), 7, 12, 200),  # 🔥 300 - 30
-
+            (exportExcel.format_tempat_tanggal(peserta.tempat_lahir, peserta.tanggal_lahir),6, 12, 145),     # 190 - 45
+            (exportExcel.format_alamat(peserta), 7, 12, 205),  # 🔥 270 - 45
             (peserta.telepon, 8, 12, 0),
             (peserta.pendidikan, 9, 12, 70),   # 100 - 30
         ]
@@ -811,3 +800,155 @@ class PesertaPage(ctk.CTkFrame):
         OUTPUT_DIR = os.path.join(download_dir, "AL-AWAL EXPORT")
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         exportExcel.export_peserta_to_excel(peserta,f"{OUTPUT_DIR}[AWL] Peserta BNSP - {tanggal_pelatihan.replace("/","-")}.xlsx")       
+        
+    def show_import_dialog(self,id_sertifikasi):
+        """Show import dialog"""
+        from pages.import_dialog import ImportDialog
+        ImportDialog(self, self.refresh_all, id_sertifikasi)    
+        
+    def show_menu_dropdown(self, id_sertifikasi, tanggal_pelatihan, button):
+        """Show dropdown menu dengan opsi Import, Ekspor, Salin"""
+        # Create dropdown window
+        menu = ctk.CTkToplevel(self)
+        menu.title("")
+        menu.overrideredirect(True)  # Remove window decorations
+        menu.configure(fg_color="#1f1f1f")
+        
+        # Position below button - GESER KE KIRI
+        menu_width = 150
+        x = button.winfo_rootx() - menu_width + button.winfo_width() -40  # 🔥 Align kanan menu dengan kanan button
+        y = button.winfo_rooty() + button.winfo_height()
+        menu.geometry(f"{menu_width}x120+{x}+{y}")
+        
+        # Make it stay on top
+        menu.attributes('-topmost', True)
+        menu.transient(self)
+        
+        # Menu items
+        ctk.CTkButton(
+            menu,
+            text="📥 Import",
+            width=160,
+            height=35,
+            fg_color="transparent",
+            hover_color="#333333",
+            anchor="w",
+            font=("Arial", 13),
+            command=lambda: (menu.destroy(), self.show_import_dialog(id_sertifikasi))
+        ).pack(pady=2, padx=10)
+        
+        ctk.CTkButton(
+            menu,
+            text="📤 Ekspor",
+            width=160,
+            height=35,
+            fg_color="transparent",
+            hover_color="#333333",
+            anchor="w",
+            font=("Arial", 13),
+            command=lambda: (menu.destroy(), self.show_export_dialog(id_sertifikasi, tanggal_pelatihan))
+        ).pack(pady=2, padx=10)
+        
+        ctk.CTkButton(
+            menu,
+            text="📋 Salin",
+            width=160,
+            height=35,
+            fg_color="transparent",
+            hover_color="#333333",
+            anchor="w",
+            font=("Arial", 13),
+            command=lambda: (menu.destroy(), self.copy_peserta_data(id_sertifikasi))
+        ).pack(pady=2, padx=10)
+        
+        # Close menu when clicking outside
+        def close_menu(event):
+            if event.widget != menu:
+                menu.destroy()
+        
+        self.after(100, lambda: menu.bind_all("<Button-1>", close_menu, add="+"))
+
+    def show_export_dialog(self, id_sertifikasi, tanggal_pelatihan):
+        """Show export dialog"""
+        from pages.export_dialog import ExportDialog
+        from services.database import DB_Get_Peserta_By_Sertifikasi
+        
+        # Load peserta
+        peserta_list = DB_Get_Peserta_By_Sertifikasi(id_sertifikasi)
+        
+        if not peserta_list:
+            messagebox.showinfo("Info", "Tidak ada peserta untuk diekspor!")
+            return
+        
+        sertifikasi_info = {
+            'id_sertifikasi': id_sertifikasi,
+            'tanggal_pelatihan': tanggal_pelatihan
+        }
+        
+        ExportDialog(self, peserta_list, sertifikasi_info, self.refresh_all)
+
+    def copy_peserta_data(self, id_sertifikasi):
+        """Copy peserta data dalam format AWL-Copy yang bisa di-import"""
+        from services.database import DB_Get_Peserta_By_Sertifikasi, DB_Get_Sertifikasi_By_ID
+        
+        # Get sertifikasi info
+        sertif = DB_Get_Sertifikasi_By_ID(id_sertifikasi)
+        if not sertif:
+            messagebox.showerror("Error", "Sertifikasi tidak ditemukan!")
+            return
+        
+        # Get peserta
+        peserta_list = DB_Get_Peserta_By_Sertifikasi(id_sertifikasi)
+        
+        if not peserta_list:
+            messagebox.showinfo("Info", "Tidak ada peserta untuk disalin!")
+            return
+        
+        def wrap(val):
+            """Wrap value dengan delimiter ⟦...⟧"""
+            return f"⟦{str(val).replace('⟦','').replace('⟧','')}⟧"
+
+        # Build data lines
+        lines = []
+        for i, p in enumerate(peserta_list, start=1):
+            line = "".join([
+                wrap(i),
+                wrap(p.nama),
+                wrap(p.skema),
+                wrap(p.nik),
+                wrap(p.tempat_lahir),
+                wrap(p.tanggal_lahir),
+                wrap(p.alamat),
+                wrap(p.kelurahan),
+                wrap(p.kecamatan),
+                wrap(p.kabupaten),
+                wrap(p.provinsi),
+                wrap(p.telepon),
+                wrap(p.pendidikan),
+                wrap(p.instansi),
+            ])
+            lines.append(line)
+
+        # Build header
+        header = "".join([
+            wrap("AWL-Copy"),
+            wrap(sertif["sertifikasi"]),
+            wrap(sertif["tanggal_pelatihan"]),
+        ])
+
+        # Combine header and data
+        result_text = header + "\n" + "\n".join(lines)
+
+        # Copy to clipboard
+        self.clipboard_clear()
+        self.clipboard_append(result_text)
+        
+        messagebox.showinfo(
+            "Sukses",
+            f"✅ {len(peserta_list)} peserta berhasil disalin!\n\n"
+            f"Format: AWL-Copy\n"
+            f"Data sudah ada di clipboard.\n\n"
+            f"Paste di dialog Import dengan format 'AWL-Copy'."
+        )
+        
+        

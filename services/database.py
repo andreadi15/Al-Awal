@@ -28,18 +28,18 @@ def init_db():
             id_peserta TEXT NOT NULL UNIQUE,
             id_sertifikasi TEXT NOT NULL,
             skema TEXT NOT NULL,
-            nama TEXT NOT NULL,
-            nik TEXT NOT NULL,
-            tempat_lahir TEXT NOT NULL,
-            tanggal_lahir DATE NOT NULL,
-            alamat TEXT NOT NULL,
-            kelurahan TEXT NOT NULL,
-            kecamatan TEXT NOT NULL,
-            kabupaten TEXT NOT NULL,
-            provinsi TEXT NOT NULL,
-            telepon TEXT NOT NULL,
-            pendidikan TEXT NOT NULL,
-            instansi TEXT NOT NULL,
+            nama TEXT,
+            nik TEXT,
+            tempat_lahir TEXT,
+            tanggal_lahir DATE,
+            alamat TEXT,
+            kelurahan TEXT,
+            kecamatan TEXT,
+            kabupaten TEXT,
+            provinsi TEXT,
+            telepon TEXT,
+            pendidikan TEXT,
+            instansi TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (id_sertifikasi) REFERENCES sertifikasi(id_sertifikasi)
         )
@@ -116,6 +116,62 @@ def DB_Save_Peserta(peserta: PesertaModel, id_sertifikasi: str):
         print("[DB ERROR SAVE]", e)
         raise
 
+    finally:
+        conn.close()
+        
+# Tambahkan di services/database.py
+
+def DB_Save_Peserta_Batch(peserta_list: list[PesertaModel], id_sertifikasi: str):
+    """
+    Simpan banyak peserta sekaligus (optimized)
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    try:
+        data_to_insert = []
+        for peserta in peserta_list:
+            data_to_insert.append((
+                peserta.id_peserta,
+                id_sertifikasi,
+                peserta.skema,
+                peserta.nama,
+                peserta.nik,
+                peserta.tempat_lahir,
+                peserta.tanggal_lahir,
+                peserta.alamat,
+                peserta.kelurahan,
+                peserta.kecamatan,
+                peserta.kabupaten,
+                peserta.provinsi,
+                peserta.telepon,
+                peserta.pendidikan,
+                peserta.instansi,
+                now
+            ))
+        
+        cursor.executemany("""
+            INSERT INTO peserta (
+                id_peserta, id_sertifikasi, skema, nama, nik,
+                tempat_lahir, tanggal_lahir, alamat, kelurahan,
+                kecamatan, kabupaten, provinsi, telepon,
+                pendidikan, instansi, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, data_to_insert)
+        
+        conn.commit()
+        
+        if DEBUG:
+            print(f"[DB] Batch saved {len(peserta_list)} peserta -> Sertifikasi: {id_sertifikasi}")
+        
+        return len(peserta_list)
+        
+    except Exception as e:
+        conn.rollback()
+        print("[DB ERROR BATCH SAVE]", e)
+        raise
     finally:
         conn.close()
         
@@ -463,6 +519,7 @@ def DB_Get_Sertifikasi_By_ID(id_sertifikasi: str):
             tanggal_pelatihan
         FROM sertifikasi
         WHERE id_sertifikasi = ?
+        
     """, (id_sertifikasi,))
 
     row = cursor.fetchone()

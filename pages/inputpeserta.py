@@ -726,7 +726,7 @@ class InputPesertaPage(ctk.CTkFrame):
             nik=self.entries["nik"].get_value(),
             tempat_lahir=self.entries["tempat_lahir"].get().upper(),
             tanggal_lahir=self.entries["tanggal_lahir"].get(),
-            alamat=self.entries["alamat"].get("1.0","end").upper(),
+            alamat=self.entries["alamat"].get("1.0","end").strip().upper(),
             kelurahan=self.entries["kelurahan"].get().upper(),
             kecamatan=self.entries["kecamatan"].get().upper(),
             kabupaten=self.entries["kabupaten"].get().upper(),
