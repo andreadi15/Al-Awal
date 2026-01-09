@@ -25,3 +25,6 @@ SERTIFIKASI_OPTIONS = [
 
 DB_PATH = "database/data.db"
 DEBUG = True
+EMAIL = "alawal.consultan@gmail.com"
+NAMA_PERUSAHAAN = "Al-Awal Consultant Indonesia"
+LOKASI_PERUSAHAAN = "DURI"

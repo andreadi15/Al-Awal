@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from pages.peserta_model import PesertaModel
 from pages.tambah_sertifikasi import AddSertifikasiDialog
 from services.export_excel import exportExcel
+from services.logic import return_format_tanggal
 from services.database import (
     DB_Get_All_Sertifikasi,
     DB_Get_Peserta_By_Sertifikasi,
@@ -310,73 +311,76 @@ class PesertaPage(ctk.CTkFrame):
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Configure grid untuk layout horizontal
-        header_frame.grid_columnconfigure(0, weight=0, minsize=50)   # Arrow
-        header_frame.grid_columnconfigure(1, weight=1, minsize=50)  # Nama Sertifikasi
-        header_frame.grid_columnconfigure(2, weight=1, minsize=50)  # Tanggal
-        header_frame.grid_columnconfigure(3, weight=1, minsize=120)  # Jumlah Peserta
-        header_frame.grid_columnconfigure(4, weight=0, minsize=450)
+        # 🔥 LEFT SIDE: Arrow + Nama
+        left_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        left_frame.pack(side="left", fill="y", padx=(15, 0))
         
         # Arrow icon
         arrow_label = ctk.CTkLabel(
-            header_frame,
+            left_frame,
             text="▶",
             font=("Arial", 18, "bold"),
             text_color="white",
             cursor="hand2"
         )
-        arrow_label.grid(row=0, column=0, padx=15, sticky="w")
+        arrow_label.pack(side="left", padx=(0, 10))
         arrow_label.bind(
             "<Button-1>",
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Nama sertifikasi - Column 1
+        nama_sertifikasi = sertif['sertifikasi']
+        if len(nama_sertifikasi) > 35:
+            display_nama = nama_sertifikasi[:32] + "..."
+        else:
+            display_nama = nama_sertifikasi
+        
         name_label = ctk.CTkLabel(
-            header_frame,
-            text=f"📜 {sertif['sertifikasi']}",
+            left_frame,
+            text=f"📜 {display_nama}",
             font=("Arial", 16, "bold"),
             text_color="white",
-            anchor="w",
             cursor="hand2"
         )
-        name_label.grid(row=0, column=1, padx=10, sticky="w")
+        name_label.pack(side="left")
         name_label.bind(
             "<Button-1>",
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Tanggal - Column 2
+        center_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        center_frame.pack(side="left", expand=True, padx=30)
+        
         date_label = ctk.CTkLabel(
-            header_frame,
-            text=f"📅 {sertif['tanggal_pelatihan']}",
+            center_frame,
+            text=f"📅 {tanggal_pelatihan}",
             font=("Arial", 14, "bold"),
-            text_color="#e0e0e0",
+            text_color="white",
             cursor="hand2"
         )
-        date_label.grid(row=0, column=2, padx=10, sticky="w")
+        date_label.pack(side="left", padx=(0, 40))  # Gap 40px ke jumlah peserta
         date_label.bind(
             "<Button-1>",
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Jumlah peserta - Column 3
+        # Jumlah peserta
         count_label = ctk.CTkLabel(
-            header_frame,
+            center_frame,
             text=f"👥 {sertif['jumlah_peserta']} peserta",
             font=("Arial", 14, "bold"),
             text_color="#ffeb3b",
             cursor="hand2"
         )
-        count_label.grid(row=0, column=3, padx=10, sticky="w")
+        count_label.pack(side="left")
         count_label.bind(
             "<Button-1>",
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        # Action Buttons Frame - Column 4
+        # 🔥 RIGHT SIDE: Action Buttons
         actions_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
-        actions_frame.grid(row=0, column=4, padx=10, sticky="e")
+        actions_frame.pack(side="right", padx=10)
         
         # Add Peserta Button
         add_peserta_btn = ctk.CTkButton(
@@ -385,62 +389,60 @@ class PesertaPage(ctk.CTkFrame):
             width=110,
             height=40,
             font=("Arial", 12, "bold"),
-            fg_color="#0036a3",
-            hover_color="#0036a3",
+            fg_color="#0d4a9f",
+            hover_color="#0a3a7f",
             corner_radius=8,
             command=lambda: self.navigate_to_input_peserta(id_sertifikasi)  
         )
         add_peserta_btn.pack(side="left", padx=3, pady=10)
         add_peserta_btn.bind("<Button-1>", lambda e: add_peserta_btn.focus_set())
         
-        # 🔥 MENU DROPDOWN (Titik 3)
+        # Update Button
+        update_btn = ctk.CTkButton(
+            actions_frame,
+            text="✏️ Edit",
+            width=90,
+            height=40,
+            font=("Arial", 12, "bold"),
+            fg_color="#ff9800",
+            hover_color="#f57c00",
+            corner_radius=8,
+            command=lambda: self.show_add_sertifikasi_dialog(sertif)
+        )
+        update_btn.pack(side="left", padx=3)
+        update_btn.bind("<Button-1>", lambda e: update_btn.focus_set())
+        
+        # Delete Button
+        delete_btn = ctk.CTkButton(
+            actions_frame,
+            text="🗑️ Hapus",
+            width=100,
+            height=40,
+            font=("Arial", 12, "bold"),
+            fg_color="#d32f2f",
+            hover_color="#b71c1c",
+            corner_radius=8,
+            command=lambda: self.delete_sertifikasi(id_sertifikasi)
+        )
+        delete_btn.pack(side="left", padx=3)
+        delete_btn.bind("<Button-1>", lambda e: delete_btn.focus_set())
+        
         menu_btn = ctk.CTkButton(
             actions_frame,
             text="⋮",
             width=50,
             height=40,
             font=("Arial", 20, "bold"),
-            fg_color="#666666",
-            hover_color="#555555",
+            fg_color="#555555",
+            hover_color="#444444",
             corner_radius=8,
             command=lambda: self.show_menu_dropdown(id_sertifikasi, tanggal_pelatihan, menu_btn)
         )
         menu_btn.pack(side="left", padx=3)
         menu_btn.bind("<Button-1>", lambda e: menu_btn.focus_set())
         
-        # # Update Button
-        # update_btn = ctk.CTkButton(
-        #     actions_frame,
-        #     text="✏️ Edit",
-        #     width=90,
-        #     height=40,
-        #     font=("Arial", 12, "bold"),
-        #     fg_color="#ff9800",
-        #     hover_color="#f57c00",
-        #     corner_radius=8,
-        #     command=lambda: self.show_add_sertifikasi_dialog(sertif)
-        # )
-        # update_btn.pack(side="left", padx=3)
-        # update_btn.bind("<Button-1>", lambda e: update_btn.focus_set())
-        
-        # # Delete Button
-        # delete_btn = ctk.CTkButton(
-        #     actions_frame,
-        #     text="🗑️ Hapus",
-        #     width=100,
-        #     height=40,
-        #     font=("Arial", 12, "bold"),
-        #     fg_color="#d32f2f",
-        #     hover_color="#b71c1c",
-        #     corner_radius=8,
-        #     command=lambda: self.delete_sertifikasi(id_sertifikasi)
-        # )
-        # delete_btn.pack(side="left", padx=3)
-        # delete_btn.bind("<Button-1>", lambda e: delete_btn.focus_set())
-        
         # Content frame (initially hidden)
         content_frame = ctk.CTkFrame(section_container, fg_color="#1f1f1f")
-        # Don't pack yet - will be shown when expanded
         
         # Store references
         section_container._id_sertifikasi = id_sertifikasi

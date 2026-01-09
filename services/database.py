@@ -2,6 +2,7 @@ import sqlite3
 from config import DB_PATH, DEBUG
 from datetime import datetime
 from pages.peserta_model import PesertaModel
+from services.logic import format_tanggal,return_format_tanggal
 
 # ====== [DB] Connection Handler ======== 
 def get_connection():
@@ -97,7 +98,7 @@ def DB_Save_Peserta(peserta: PesertaModel, id_sertifikasi: str):
             peserta.nama,
             peserta.nik,
             peserta.tempat_lahir,
-            peserta.tanggal_lahir,
+            format_tanggal(peserta.tanggal_lahir),
             peserta.alamat,
             peserta.kelurahan,
             peserta.kecamatan,
@@ -139,7 +140,7 @@ def DB_Save_Peserta_Batch(peserta_list: list[PesertaModel], id_sertifikasi: str)
                 peserta.nama,
                 peserta.nik,
                 peserta.tempat_lahir,
-                peserta.tanggal_lahir,
+                format_tanggal(peserta.tanggal_lahir),
                 peserta.alamat,
                 peserta.kelurahan,
                 peserta.kecamatan,
@@ -218,7 +219,7 @@ def DB_Get_Peserta_By_Sertifikasi(id_sertifikasi: str):
             nama = row[3],
             nik = row[4],
             tempat_lahir = row[5],
-            tanggal_lahir = row[6],
+            tanggal_lahir = return_format_tanggal(row[6]),
             alamat = row[7],
             kelurahan = row[8],
             kecamatan = row[9],
@@ -301,7 +302,7 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
     return [
         {
             'id': row[0], 'id_peserta': row[1], 'id_sertifikasi': row[2], 'skema': row[3], 'nama': row[4],
-            'nik': row[5], 'tempat_lahir': row[6], 'tanggal_lahir': row[7],
+            'nik': row[5], 'tempat_lahir': row[6], 'tanggal_lahir': return_format_tanggal(row[7]),
             'alamat': row[8], 'kelurahan': row[9], 'kecamatan': row[10],
             'kabupaten': row[11], 'provinsi': row[12], 'telepon': row[13],
             'pendidikan': row[14], 'instansi': row[15]
@@ -408,7 +409,7 @@ def DB_Get_Peserta_By_Id(id_peserta: str):
             nama=row[3],
             nik=row[4],
             tempat_lahir=row[5],
-            tanggal_lahir=row[6],
+            tanggal_lahir=return_format_tanggal(row[6]),
             alamat=row[7],
             kelurahan=row[8],
             kecamatan=row[9],
@@ -529,7 +530,7 @@ def DB_Get_Sertifikasi_By_ID(id_sertifikasi: str):
         return {
             "id_sertifikasi": row[0],
             "sertifikasi": row[1],
-            "tanggal_pelatihan": row[2]
+            "tanggal_pelatihan": return_format_tanggal(row[2])
         }
     return None
 

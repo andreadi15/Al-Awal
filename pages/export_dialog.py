@@ -3,7 +3,10 @@
 # =======================
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
+from services.export_rekap_bnsp import export_Rekap_BNSP
+from config import NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN
 import os
+from datetime import datetime
 from pages.peserta_model import PesertaModel
 
 class ExportDialog(ctk.CTkToplevel):
@@ -18,7 +21,7 @@ class ExportDialog(ctk.CTkToplevel):
         
         # Window setup
         self.title("📤 Ekspor Data Peserta")
-        self.geometry("900x700")
+        self.geometry("900x600")
         self.resizable(False, False)
         
         # Make modal
@@ -292,22 +295,61 @@ class ExportDialog(ctk.CTkToplevel):
     def export_rekap_bnsp(self):
         """Export Rekap BNSP format"""
         # Collect data with gender
-        data = []
+        hari_map = {
+            0: "Senin",
+            1: "Selasa",
+            2: "Rabu",
+            3: "Kamis",
+            4: "Jumat",
+            5: "Sabtu",
+            6: "Minggu"
+        }
+        tanggal_pelatihan = self.sertifikasi_info["tanggal_pelatihan"]
+        dt = datetime.strptime(tanggal_pelatihan, "%Y-%m-%d")
+        new_tanggal_pelatihan = dt.strftime("%d-%m-%Y")
+        data_peserta = []
         for i, peserta in enumerate(self.peserta_list, start=1):
             gender = peserta._gender_widget.get()
-            data.append({
+            data_peserta.append({
                 'no': i,
-                'nama': peserta.nama,
-                'jenis_kelamin': gender
+                'tuk': NAMA_PERUSAHAAN,
+                'tempat': LOKASI_PERUSAHAAN,
+                'hari': hari_map[dt.weekday()],
+                'tanggal': new_tanggal_pelatihan.replace("-","/"), 
+                'nama_peserta': peserta.nama,
+                'skema': peserta.skema,
+                'nik': peserta.nik,
+                'tempat_lahir': peserta.tempat_lahir.replace("-","/"),
+                'tanggal_lahir': peserta.tanggal_lahir,
+                'jenis_kelamin': gender,
+                'alamat': f"{peserta.alamat}, KEL. {peserta.kelurahan}, KEC. {peserta.kecamatan}",
+                'kabupaten': peserta.kabupaten,
+                'provinsi': peserta.provinsi,
+                'no_hp': peserta.telepon,
+                'email': EMAIL,
+                'pendidikan': peserta.pendidikan,
+                'pekerjaan': "Kary. Swasta",
+                'instansi': peserta.instansi
             })
         
-        # TODO: Implement actual export logic
-        messagebox.showinfo(
-            "Ekspor Rekap BNSP",
-            f"✅ Format: Rekap BNSP\n"
-            f"📊 Total: {len(data)} peserta\n\n"
-            f"Ekspor akan diimplementasikan..."
-        )
+        DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+        TEMPLATE_PATH = "template_rekap_bnsp.xlsx"
+        OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{new_tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
+        
+    
+        # Export data
+        exporter = export_Rekap_BNSP(TEMPLATE_PATH)
+        success = exporter.export(data_peserta, OUTPUT_PATH)
+        
+        if success:
+            messagebox.showinfo(
+                "E✅ Export berhasil!\n",
+                f"File disimpan di: {OUTPUT_PATH}"
+            )
+        else:
+            messagebox.showinfo(
+                "E❌ Export gagal!\n"                
+            )
         
         if self.callback:
             self.callback()
