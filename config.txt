@@ -4,11 +4,32 @@
 general.nama_perusahaan = Al-Awal Consultant Indonesia
 general.lokasi_perusahaan = DURI
 general.email = alawal.consultan@gmail.com
-general.template_base = ../template/BNSP
+general.template_base = template/BNSP
 
 # =========================
 # TEMPLATE CONFIG
 # =========================
-template.operator dozer = dok_a_oprt_dozer.docx, dok_b_oprt_dozer.docx
-template.operator forklift = dok_a_oprt_forklift.docx
-template.welder smaw = dok_a_welder_smaw.docx
+template.AHLI PENGENDALI BOR = dok_a_apb.doc, dok_b_apb.doc
+template.AHLI PENGENDALI PERAWATAN SUMUR = dok_a_apps.docx, dok_b_apps.docx
+template.OPERATOR FORKLIFT = dok_a_forklift.doc, dok_b_c_forklift.doc
+template.OPERATOR KRAN PUTAR TETAP KLS.C = dok_a_kpt-c.doc, dok_b_c_kpt-c.doc
+template.OPERATOR LANTAI BOR = dok_a_olb.doc, dok_b_olb.doc
+template.OPERATOR MENARA PERAWATAN SUMUR = dok_a_omps.docx, dok_b_omps.docx
+template.OPERATOR KRAN MOBIL KLS.A = dok_a_okm-a.doc, dok_b_c_okm-a.doc
+template.OPERATOR KRAN MOBIL KLS.B = dok_a_okm-b.doc, dok_b_c_okm-b.doc
+template.OPERATOR KRAN MOBIL KLS.C = dok_a_okm-c.doc, dok_b_c_okm-c.doc
+template.OPERATOR LANTAI PERAWATAN SUMUR = dok_a_olps.docx, dok_b_olps.docx
+template.OPERATOR UNIT PERAWATAN SUMUR = dok_a_oups.docx, dok_b_oups.docx
+template.K3 BEKERJA DIKETINGGIAN-TKBT2 = dok_a_tkbt.docx, dok_b_c_tkbt.docx
+template.OPERATOR K3 MIGAS = dok_a_oprt_k3.doc, dok_b_c_oprt_k3.doc
+template.AHLI K3 UMUM = dok_a_ahli_k3.docx, dok_b_c_ahli_k3.docx
+template.PENGAWAS K3 MIGAS = dok_a_peng_k3.doc, dok_b_c_peng_k3.doc
+template.PETUGAS K3 = dok_a_petugas_k3.docx, dok_b_c_petugas_k3.docx
+template.OPERATOR SCAFFOLDING = dok_a_operator_scaff.docx, dok_b_operator_scaff.docx
+template.JURU IKAT BEBAN = dok_a_rigger.docx, dok_b_c_rigger.docx
+template.INSPEKTUR PESAWAT ANGKAT = dok_a_crane_insp.docx, dok_b_crane_insp.docx
+template.JURU BOR = dok_a_juru_bor.doc, dok_b_c_juru_bor.doc
+template.OPERATOR MENARA BOR = dok_a_omb.doc, dok_b_omb.doc
+template.OPERATOR GAS TESTER MIGAS = dok_a_gastester.docx, dok_b_c_gastester.docx
+template.PENGELASAN PIPA - 6G = dok_a_welder_6g.doc
+

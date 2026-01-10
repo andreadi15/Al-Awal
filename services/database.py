@@ -359,7 +359,7 @@ def DB_Delete_Peserta_Batch(id_peserta_list: list):
     cursor = conn.cursor()
     
     placeholders = ','.join(['?'] * len(id_peserta_list))
-    cursor.execute(f"DELETE FROM peserta WHERE nik IN ({placeholders})", id_peserta_list)
+    cursor.execute(f"DELETE FROM peserta WHERE id_peserta IN ({placeholders})", id_peserta_list)
     
     deleted_count = cursor.rowcount
     conn.commit()

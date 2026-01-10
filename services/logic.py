@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from pages.peserta_model import PesertaModel
 def load_config(path):
     config = {
         "general": {},
@@ -17,7 +17,7 @@ def load_config(path):
                 continue
 
             key, value = line.split('=', 1)
-            key = key.strip().lower()
+            key = key.strip()
             value = value.strip()
 
             # GENERAL
@@ -149,4 +149,25 @@ def get_text_hari(tanggal):
     return hari_map[dt.weekday()]
 
    
-    
+@staticmethod
+def format_tempat_tanggal(tempat, tanggal):
+    if not tempat and not tanggal:
+        return ""
+    return f"{tempat}, {tanggal}"
+
+def format_telepon(nomor: str):
+    nomor = nomor.replace("-", "").replace(" ", "")
+    return "-".join(nomor[i:i+4] for i in range(0, len(nomor), 4))
+
+def format_alamat(p: PesertaModel):
+    if not p.alamat or not p.kelurahan or not p.kecamatan or not p.kabupaten or not p.provinsi:
+        return ""
+    alamat = (
+        f"{p.alamat}, "
+        f"KEL. {p.kelurahan}, "
+        f"KEC. {p.kecamatan}, "
+        f"{format_kabupaten(p.kabupaten)}, "
+        f"{p.provinsi}"
+    )
+        
+    return alamat

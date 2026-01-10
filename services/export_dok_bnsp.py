@@ -7,7 +7,7 @@ import os
 # from datetime import datetime
 import sys
 import time
-from config import TEMPLATE_BASE,TEMPLATE_DOK_BNSP
+from config import BASE_DIR,TEMPLATE_BASE,TEMPLATE_DOK_BNSP
 from tkinter import messagebox
 from services.logic import format_kabupaten,format_tanggal_to_general
 
@@ -42,6 +42,7 @@ class export_Dok_BNSP:
             output_folder (str): Folder output
             progress_callback (callable): Callback untuk update progress
         """
+
         total = len(peserta_list)
         successful = 0
         for index, peserta in enumerate(peserta_list, start=1):
@@ -51,7 +52,7 @@ class export_Dok_BNSP:
                 if not all_template_name:
                     messagebox.showinfo("Informasi",f"Skema '{peserta.skema}' not found in config.txt, skipping...")
                     continue
-                all_template_path = [os.path.join(TEMPLATE_BASE, v.strip())for v in all_template_name.split(',')if v.strip()]
+                all_template_path = [os.path.join(BASE_DIR,TEMPLATE_BASE, v.strip()) for v in all_template_name if v.strip()]
                 # Convert peserta to row format
                 row_data = self._peserta_to_row(tanggal_pelatihan, peserta, ttd_path, index)
                 
@@ -187,7 +188,7 @@ class export_Dok_BNSP:
             # Start Word
             if not self.word:
                 self.word = win32.DispatchEx("Word.Application")
-                self.word.Visible = False
+                self.word.Visible = True
             
             # Open template
             doc = self.word.Documents.Open(template_path)
@@ -307,7 +308,7 @@ class export_Dok_BNSP:
             # logging.error(f"Error generating document: {str(e)}")
             # import traceback
             # logging.error(f"Detailed error: {traceback.format_exc()}")
-            
+            messagebox.showinfo("Error",e)
             try:
                 if 'doc' in locals():
                     doc.Close(SaveChanges=False)

@@ -7,8 +7,7 @@ import os
 from datetime import datetime, timedelta
 from pages.peserta_model import PesertaModel
 from pages.tambah_sertifikasi import AddSertifikasiDialog
-from services.export_awl_report import exportExcel
-from services.logic import return_format_tanggal
+from services.logic import return_format_tanggal,format_telepon,format_tempat_tanggal,format_alamat
 from services.database import (
     DB_Get_All_Sertifikasi,
     DB_Get_Peserta_By_Sertifikasi,
@@ -631,8 +630,8 @@ class PesertaPage(ctk.CTkFrame):
             (peserta.instansi, 3, 12, 105),    # 150 - 45
             (peserta.skema, 4, 12, 135),        # 180 - 45
             (peserta.nik[:16] if peserta.nik else "", 5, 12, 0),
-            (exportExcel.format_tempat_tanggal(peserta.tempat_lahir, peserta.tanggal_lahir),6, 12, 145),     # 190 - 45
-            (exportExcel.format_alamat(peserta), 7, 12, 205),  # 🔥 270 - 45
+            (format_tempat_tanggal(peserta.tempat_lahir, peserta.tanggal_lahir),6, 12, 145),     # 190 - 45
+            (format_alamat(peserta), 7, 12, 205),  # 🔥 270 - 45
             (peserta.telepon, 8, 12, 0),
             (peserta.pendidikan, 9, 12, 70),   # 100 - 30
         ]
@@ -696,26 +695,26 @@ class PesertaPage(ctk.CTkFrame):
         
         result = messagebox.askyesno(
             "Konfirmasi",
-            f"Hapus {len(self.selected_ids)} peserta terpilih?\n\nData tidak dapat dikembalikan!"
+            f"Hapus {len(selected_in_this_sertifikasi)} peserta terpilih?\n\nData tidak dapat dikembalikan!"
         )
         
         if result:
             try:
                 # Get NIK list
                 peserta_list = self.peserta_cache.get(id_sertifikasi, [])
-                nik_list = [
-                    p['nik'] for p in peserta_list 
-                    if p['id'] in selected_in_this_sertifikasi
+                id_peserta_list = [
+                    p.id_peserta for p in peserta_list 
+                    if p.id_peserta in selected_in_this_sertifikasi
                 ]
                 
                 # Delete from database
-                deleted = DB_Delete_Peserta_Batch(nik_list)
+                deleted = DB_Delete_Peserta_Batch(id_peserta_list)
                 
                 if deleted > 0:
                     # Remove from cache
                     self.peserta_cache[id_sertifikasi] = [
                         p for p in peserta_list 
-                        if p['id'] not in self.selected_ids
+                        if p.id_peserta not in self.selected_ids
                     ]
                     
                     # Clear selection
@@ -795,14 +794,7 @@ class PesertaPage(ctk.CTkFrame):
         if messagebox.askyesno("Konfirmasi", f"Konfirmasi Untuk Hapus?"):
             DB_Delete_Sertifikasi(id_sertifikasi,True)
             self.refresh_all()
-        
-    def export_sertifikasi(self, id_sertifikasi,tanggal_pelatihan: str):
-        peserta = DB_Get_Peserta_By_Sertifikasi(id_sertifikasi)
-        download_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-        OUTPUT_DIR = os.path.join(download_dir, "AL-AWAL EXPORT")
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        exportExcel.export_peserta_to_excel(peserta,f"{OUTPUT_DIR}[AWL] Peserta BNSP - {tanggal_pelatihan.replace("/","-")}.xlsx")       
-        
+         
     def show_import_dialog(self,id_sertifikasi):
         """Show import dialog"""
         from pages.import_dialog import ImportDialog
@@ -825,6 +817,18 @@ class PesertaPage(ctk.CTkFrame):
         # Make it stay on top
         menu.attributes('-topmost', True)
         menu.transient(self)
+        
+        ctk.CTkButton(
+            menu,
+            text="📋 Salin",
+            width=160,
+            height=35,
+            fg_color="transparent",
+            hover_color="#333333",
+            anchor="w",
+            font=("Arial", 13),
+            command=lambda: (menu.destroy(), self.copy_peserta_data(id_sertifikasi))
+        ).pack(pady=2, padx=10)
         
         # Menu items
         ctk.CTkButton(
@@ -849,19 +853,7 @@ class PesertaPage(ctk.CTkFrame):
             anchor="w",
             font=("Arial", 13),
             command=lambda: (menu.destroy(), self.show_export_dialog(id_sertifikasi, tanggal_pelatihan))
-        ).pack(pady=2, padx=10)
-        
-        ctk.CTkButton(
-            menu,
-            text="📋 Salin",
-            width=160,
-            height=35,
-            fg_color="transparent",
-            hover_color="#333333",
-            anchor="w",
-            font=("Arial", 13),
-            command=lambda: (menu.destroy(), self.copy_peserta_data(id_sertifikasi))
-        ).pack(pady=2, padx=10)
+        ).pack(pady=2, padx=10)                
         
         # Close menu when clicking outside
         def close_menu(event):

@@ -52,7 +52,6 @@ class ImportDialog(ctk.CTkToplevel):
             text_color="white"
         ).pack(pady=20)
         
-        # 🔥 COMBO BOX FRAME - DI BAWAH INSTRUCTIONS, DI ATAS CONTAINER
         combo_frame = ctk.CTkFrame(self, fg_color="#1f1f1f")
         combo_frame.pack(fill="x", padx=20, pady=(0, 15))
         

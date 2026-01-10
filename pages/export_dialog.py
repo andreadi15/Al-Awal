@@ -408,12 +408,11 @@ class ExportDialog(ctk.CTkToplevel):
         tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
         
         DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-        TEMPLATE_PATH = "template_rekap_bnsp.xlsx"
         OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
         
     
         # Export data
-        exporter = export_Dok_BNSP(TEMPLATE_PATH)
+        exporter = export_Dok_BNSP()
         success, total = exporter.export_dokumen(tanggal_pelatihan, self.peserta_list, self.selected_files, OUTPUT_PATH)
         
         if success:
@@ -423,7 +422,7 @@ class ExportDialog(ctk.CTkToplevel):
             )
         else:
             messagebox.showinfo(
-                "E❌ Export gagal!\n"                
+                "ERROR","❌ Export gagal!\n"                
             )
         
         if self.callback:
