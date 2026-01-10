@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta
 from pages.peserta_model import PesertaModel
 from pages.tambah_sertifikasi import AddSertifikasiDialog
-from services.export_excel import exportExcel
+from services.export_awl_report import exportExcel
 from services.logic import return_format_tanggal
 from services.database import (
     DB_Get_All_Sertifikasi,

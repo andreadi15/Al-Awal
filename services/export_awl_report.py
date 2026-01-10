@@ -3,7 +3,7 @@ from openpyxl import Workbook
 from pages.peserta_model import PesertaModel
 from services.logic import format_kabupaten
 
-class exportExcel(): 
+class export_Awl_Report(): 
                 
     def export_peserta_to_excel(self,peserta_list, file_path):
         wb = Workbook()
@@ -61,9 +61,6 @@ class exportExcel():
         if not tempat and not tanggal:
             return ""
         return f"{tempat}, {tanggal}"
-
-    
-
 
     def format_telepon(self, nomor: str):
         nomor = nomor.replace("-", "").replace(" ", "")

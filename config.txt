@@ -1,0 +1,14 @@
+# =========================
+# GENERAL CONFIG
+# =========================
+general.nama_perusahaan = Al-Awal Consultant Indonesia
+general.lokasi_perusahaan = DURI
+general.email = alawal.consultan@gmail.com
+general.template_base = ../template/BNSP
+
+# =========================
+# TEMPLATE CONFIG
+# =========================
+template.operator dozer = dok_a_oprt_dozer.docx, dok_b_oprt_dozer.docx
+template.operator forklift = dok_a_oprt_forklift.docx
+template.welder smaw = dok_a_welder_smaw.docx

@@ -1,4 +1,8 @@
 # constants/options.py
+from services.logic import load_config
+import os
+from tkinter import messagebox
+import sys
 
 SKEMA_OPTIONS = [
     "Skema A",
@@ -23,8 +27,17 @@ SERTIFIKASI_OPTIONS = [
     "IADC"
 ]
 
+if os.path.exists("config.txt"):
+    CONFIG = load_config()
+else:
+    messagebox.showinfo("Informasi","File Config Tidak Ditemukan...")
+    sys.exit(0)
+
+
 DB_PATH = "database/data.db"
 DEBUG = True
-EMAIL = "alawal.consultan@gmail.com"
-NAMA_PERUSAHAAN = "Al-Awal Consultant Indonesia"
-LOKASI_PERUSAHAAN = "DURI"
+EMAIL = CONFIG['general']['email']
+NAMA_PERUSAHAAN = CONFIG['general']['nama_perusahaan']
+LOKASI_PERUSAHAAN = CONFIG['general']['lokasi_perusahaan']
+TEMPLATE_DOK_BNSP = CONFIG['template']
+TEMPLATE_BASE = CONFIG['general']['template_base']

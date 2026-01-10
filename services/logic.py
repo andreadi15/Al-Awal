@@ -1,5 +1,45 @@
 from datetime import datetime
 
+def load_config(path):
+    config = {
+        "general": {},
+        "template": {}
+    }
+
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+
+            if not line or line.startswith('#'):
+                continue
+
+            if '=' not in line:
+                continue
+
+            key, value = line.split('=', 1)
+            key = key.strip().lower()
+            value = value.strip()
+
+            # GENERAL
+            if key.startswith("general."):
+                sub_key = key.replace("general.", "", 1)
+                config["general"][sub_key] = value
+
+            # TEMPLATE
+            elif key.startswith("template."):
+                skema = key.replace("template.", "", 1)
+
+                templates = [
+                    v.strip()
+                    for v in value.split(',')
+                    if v.strip()
+                ]
+
+                config["template"][skema] = templates
+
+    return config
+
+
 def format_tanggal(tanggal):
     """Convert berbagai format tanggal ke YYYY-MM-DD"""
     if not tanggal or not tanggal.strip():
@@ -81,4 +121,32 @@ def format_kabupaten(kabupaten: str):
     ]
     prefix = "KOTA" if kabupaten.lower() in KOTA_LIST else "KAB."
     return f"{prefix.upper()} {kabupaten}"
+   
+def format_tanggal_to_general(tanggal):
+    
+    new_tanggal = return_format_tanggal(tanggal)
+    dt = datetime.strptime(new_tanggal, "%d-%m-%Y")
+    bulan_id = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ] 
+    
+    bulan = bulan_id[dt.month - 1]
+    hari = dt.strftime("%d")
+    return hari,bulan,dt.year
+
+def get_text_hari(tanggal):
+    hari_map = {
+        0: "Senin",
+        1: "Selasa",
+        2: "Rabu",
+        3: "Kamis",
+        4: "Jumat",
+        5: "Sabtu",
+        6: "Minggu"
+    }
+    dt = datetime.strptime(tanggal, "%d-%m-%Y")
+    return hari_map[dt.weekday()]
+
+   
     
