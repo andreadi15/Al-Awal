@@ -6,7 +6,7 @@ from openpyxl.styles import Border, Side, Font, Alignment, PatternFill
 from copy import copy
 import re
 
-class export_Rekap_BNSP:
+class export_Excel:
     """
     Export data ke Excel menggunakan sistem template + placeholder.
     
@@ -241,15 +241,15 @@ class export_Rekap_BNSP:
             return Border()
         
         return Border(
-            left=export_Rekap_BNSP._copy_side(border.left),
-            right=export_Rekap_BNSP._copy_side(border.right),
-            top=export_Rekap_BNSP._copy_side(border.top),
-            bottom=export_Rekap_BNSP._copy_side(border.bottom),
-            diagonal=export_Rekap_BNSP._copy_side(border.diagonal),
+            left=export_Excel._copy_side(border.left),
+            right=export_Excel._copy_side(border.right),
+            top=export_Excel._copy_side(border.top),
+            bottom=export_Excel._copy_side(border.bottom),
+            diagonal=export_Excel._copy_side(border.diagonal),
             diagonal_direction=border.diagonal_direction,
             outline=border.outline,
-            vertical=export_Rekap_BNSP._copy_side(border.vertical),
-            horizontal=export_Rekap_BNSP._copy_side(border.horizontal)
+            vertical=export_Excel._copy_side(border.vertical),
+            horizontal=export_Excel._copy_side(border.horizontal)
         )
     
     @staticmethod

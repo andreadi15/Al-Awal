@@ -3,10 +3,10 @@
 # =======================
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
-from services.export_rekap_bnsp import export_Rekap_BNSP
+from services.export_excel import export_Excel
 from services.export_dok_bnsp import export_Dok_BNSP
 from config import NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN
-from services.logic import return_format_tanggal,get_text_hari
+from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
 import os
 from datetime import datetime
 from pages.peserta_model import PesertaModel
@@ -325,12 +325,12 @@ class ExportDialog(ctk.CTkToplevel):
             })
         
         DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-        TEMPLATE_PATH = "template_rekap_bnsp.xlsx"
+        TEMPLATE_PATH = "template/excel/template_rekap_bnsp.xlsx"
         OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
         
     
         # Export data
-        exporter = export_Rekap_BNSP(TEMPLATE_PATH)
+        exporter = export_Excel(TEMPLATE_PATH)
         success = exporter.export(data_peserta, OUTPUT_PATH)
         
         if success:
@@ -349,20 +349,40 @@ class ExportDialog(ctk.CTkToplevel):
     
     def export_awl_report(self):
         """Export AWL Report format"""
-        data = []
+        
+        tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
+        data_peserta = []
         for i, peserta in enumerate(self.peserta_list, start=1):
-            data.append({
+            data_peserta.append({
                 'no': i,
-                'nama': peserta.nama
+                'nama_peserta': peserta.nama,
+                'skema': peserta.skema,
+                'nik': peserta.nik,
+                'place_DOB': f"{peserta.tempat_lahir}, {peserta.tanggal_lahir}",
+                'alamat': f"{peserta.alamat}, KEL. {peserta.kelurahan}, KEC. {peserta.kecamatan}, {format_kabupaten(peserta.kabupaten)}, {peserta.provinsi}",
+                'no_hp': peserta.telepon,
+                'pendidikan': peserta.pendidikan,
+                'instansi': peserta.instansi
             })
         
-        # TODO: Implement actual export logic
-        messagebox.showinfo(
-            "Ekspor AWL Report",
-            f"✅ Format: AWL Report\n"
-            f"📊 Total: {len(data)} peserta\n\n"
-            f"Ekspor akan diimplementasikan..."
-        )
+        DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+        TEMPLATE_PATH = "template/excel/template_awl_report.xlsx"
+        OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[AWL] Peserta BNSP - {tanggal_pelatihan}.xlsx")
+        
+    
+        # Export data
+        exporter = export_Excel(TEMPLATE_PATH)
+        success = exporter.export(data_peserta, OUTPUT_PATH)
+        
+        if success:
+            messagebox.showinfo(
+                "E✅ Export berhasil!\n",
+                f"File disimpan di: {OUTPUT_PATH}"
+            )
+        else:
+            messagebox.showinfo(
+                "E❌ Export gagal!\n"                
+            )
         
         if self.callback:
             self.callback()
@@ -375,7 +395,7 @@ class ExportDialog(ctk.CTkToplevel):
         for peserta in self.peserta_list:
             if peserta.id_peserta not in self.selected_files:
                 missing_files.append(peserta.nama)
-        
+        # 
         if missing_files:
             messagebox.showwarning(
                 "File Belum Lengkap",
@@ -389,12 +409,12 @@ class ExportDialog(ctk.CTkToplevel):
         
         DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
         TEMPLATE_PATH = "template_rekap_bnsp.xlsx"
-        OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
+        OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
         
     
         # Export data
         exporter = export_Dok_BNSP(TEMPLATE_PATH)
-        success, total = exporter.export_dokumen(tanggal_pelatihan, OUTPUT_PATH)
+        success, total = exporter.export_dokumen(tanggal_pelatihan, self.peserta_list, self.selected_files, OUTPUT_PATH)
         
         if success:
             messagebox.showinfo(
