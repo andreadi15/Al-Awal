@@ -47,7 +47,7 @@ class export_Dok_BNSP:
         successful = 0
         for index, peserta in enumerate(peserta_list, start=1):
             try:
-                variable = 0
+                variable = 2
                 # Get skema_alt from map
                 all_template_name = TEMPLATE_DOK_BNSP.get(peserta.skema)
                 if not all_template_name:
