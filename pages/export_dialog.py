@@ -7,7 +7,7 @@ from services.export_excel import export_Excel
 from services.export_dok_bnsp import export_Dok_BNSP
 from config import NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN
 from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
-import os
+import os, threading
 from datetime import datetime
 from pages.peserta_model import PesertaModel
 
@@ -89,7 +89,7 @@ class ExportDialog(ctk.CTkToplevel):
         self.content_container.pack(fill="both", expand=True, padx=20, pady=(0, 15))
         
         # Bottom buttons
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent", height=60)
+        btn_frame = ctk.CTkFrame(self, fg_color="#2a2a2a", height=60)
         btn_frame.pack(fill="x", padx=20, pady=(0, 20))
         btn_frame.pack_propagate(False)
 
@@ -99,7 +99,7 @@ class ExportDialog(ctk.CTkToplevel):
         self.status_container.pack(side="left", fill="x", expand=True, padx=20)
         self.status_container.pack_propagate(False)  # PENTING: maintain height
         # Progress frame (shown during export)
-        self.progress_frame = ctk.CTkFrame(self.status_container, fg_color="#1f1f1f", corner_radius=10)
+        self.progress_frame = ctk.CTkFrame(self.status_container, fg_color="#2a2a2a", corner_radius=10)
 
         # Progress percentage label
         self.progress_label = ctk.CTkLabel(
@@ -252,13 +252,13 @@ class ExportDialog(ctk.CTkToplevel):
         
         header_frame.grid_columnconfigure(0, weight=0, minsize=50)
         header_frame.grid_columnconfigure(1, weight=1, minsize=200)
-        header_frame.grid_columnconfigure(2, weight=0, minsize=120)
-        header_frame.grid_columnconfigure(3, weight=1, minsize=300)
+        # header_frame.grid_columnconfigure(2, weight=0, minsize=120)
+        header_frame.grid_columnconfigure(2, weight=1, minsize=300)
         
         ctk.CTkLabel(header_frame, text="No", font=("Arial", 12, "bold")).grid(row=0, column=0, padx=10, sticky="w")
         ctk.CTkLabel(header_frame, text="Nama", font=("Arial", 12, "bold")).grid(row=0, column=1, padx=10, sticky="w")
-        ctk.CTkLabel(header_frame, text="Jenis Kelamin", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=10, sticky="w")
-        ctk.CTkLabel(header_frame, text="File TTD", font=("Arial", 12, "bold")).grid(row=0, column=3, padx=10, sticky="w")
+        # ctk.CTkLabel(header_frame, text="Jenis Kelamin", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=10, sticky="w")
+        ctk.CTkLabel(header_frame, text="File TTD", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=10, sticky="w")
         
         # Rows
         for i, peserta in enumerate(self.peserta_list, start=1):
@@ -267,25 +267,25 @@ class ExportDialog(ctk.CTkToplevel):
             
             row_frame.grid_columnconfigure(0, weight=0, minsize=50)
             row_frame.grid_columnconfigure(1, weight=1, minsize=200)
-            row_frame.grid_columnconfigure(2, weight=0, minsize=120)
-            row_frame.grid_columnconfigure(3, weight=1, minsize=300)
+            # row_frame.grid_columnconfigure(2, weight=0, minsize=120)
+            row_frame.grid_columnconfigure(2, weight=1, minsize=300)
             
             ctk.CTkLabel(row_frame, text=str(i), font=("Arial", 11)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
             ctk.CTkLabel(row_frame, text=peserta.nama, font=("Arial", 11)).grid(row=0, column=1, padx=10, pady=5, sticky="w")
             
-            gender_combo = ctk.CTkComboBox(
-                row_frame,
-                values=["Laki-laki", "Perempuan"],
-                width=110,
-                height=30,
-                state="readonly"
-            )
-            gender_combo.set("Laki-laki")
-            gender_combo.grid(row=0, column=2, padx=10, pady=5)
+            # gender_combo = ctk.CTkComboBox(
+            #     row_frame,
+            #     values=["Laki-laki", "Perempuan"],
+            #     width=110,
+            #     height=30,
+            #     state="readonly"
+            # )
+            # gender_combo.set("Laki-laki")
+            # gender_combo.grid(row=0, column=2, padx=10, pady=5)
             
             # File selector container
             file_container = ctk.CTkFrame(row_frame, fg_color="transparent")
-            file_container.grid(row=0, column=3, padx=10, pady=5, sticky="ew")
+            file_container.grid(row=0, column=2, padx=10, pady=5, sticky="ew")
             
             # Path label (scrollable)
             path_label = ctk.CTkLabel(
@@ -310,7 +310,7 @@ class ExportDialog(ctk.CTkToplevel):
             browse_btn.pack(side="right")
             
             # Store references
-            peserta._gender_widget = gender_combo
+            # peserta._gender_widget = gender_combo
             peserta._path_label = path_label
     
     def browse_file(self, peserta, path_label):
@@ -403,7 +403,7 @@ class ExportDialog(ctk.CTkToplevel):
         
         # Reset exporting state
         self.is_exporting = False
-        
+        self.selected_files = {}
         # Show export button if hidden
         if not self.export_btn.winfo_ismapped():
             self.export_btn.pack(side="right", padx=20)
@@ -483,142 +483,194 @@ class ExportDialog(ctk.CTkToplevel):
         
     def export_rekap_bnsp(self):
         """Export Rekap BNSP format"""
-        # Collect data with gender
-       
-        tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
-        data_peserta = []
-        for i, peserta in enumerate(self.peserta_list, start=1):
-            gender = peserta._gender_widget.get()
-            data_peserta.append({
-                'no': i,
-                'tuk': NAMA_PERUSAHAAN,
-                'tempat': LOKASI_PERUSAHAAN,
-                'hari': get_text_hari(),
-                'tanggal': tanggal_pelatihan.replace("-","/"), 
-                'nama_peserta': peserta.nama,
-                'skema': peserta.skema,
-                'nik': peserta.nik,
-                'tempat_lahir': peserta.tempat_lahir,
-                'tanggal_lahir': peserta.tanggal_lahir.replace("-","/"),
-                'jenis_kelamin': gender,
-                'alamat': f"{peserta.alamat}, KEL. {peserta.kelurahan}, KEC. {peserta.kecamatan}",
-                'kabupaten': peserta.kabupaten,
-                'provinsi': peserta.provinsi,
-                'no_hp': peserta.telepon,
-                'email': EMAIL,
-                'pendidikan': peserta.pendidikan,
-                'pekerjaan': "Kary. Swasta",
-                'instansi': peserta.instansi
-            })
+        def export_thread():
+            try:
+                # Update progress
+                self.after(0, lambda: self.update_progress(0.2))
+                
+                tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
+                data_peserta = []
+                for i, peserta in enumerate(self.peserta_list, start=1):
+                    gender = peserta._gender_widget.get()
+                    data_peserta.append({
+                        'no': i,
+                        'tuk': NAMA_PERUSAHAAN,
+                        'tempat': LOKASI_PERUSAHAAN,
+                        'hari': get_text_hari(),
+                        'tanggal': tanggal_pelatihan.replace("-","/"), 
+                        'nama_peserta': peserta.nama,
+                        'skema': peserta.skema,
+                        'nik': peserta.nik,
+                        'tempat_lahir': peserta.tempat_lahir,
+                        'tanggal_lahir': peserta.tanggal_lahir.replace("-","/"),
+                        'jenis_kelamin': gender,
+                        'alamat': f"{peserta.alamat}, KEL. {peserta.kelurahan}, KEC. {peserta.kecamatan}",
+                        'kabupaten': peserta.kabupaten,
+                        'provinsi': peserta.provinsi,
+                        'no_hp': peserta.telepon,
+                        'email': EMAIL,
+                        'pendidikan': peserta.pendidikan,
+                        'pekerjaan': "Kary. Swasta",
+                        'instansi': peserta.instansi
+                    })
+                
+                DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+                TEMPLATE_PATH = "template/excel/template_rekap_bnsp.xlsx"
+                OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
+                
+                # Update progress
+                self.after(0, lambda: self.update_progress(0.5))
+                
+                # Export data
+                exporter = export_Excel(TEMPLATE_PATH)
+                success = exporter.export(data_peserta, OUTPUT_PATH)
+                
+                # Update progress
+                self.after(0, lambda: self.update_progress(1.0))
+                
+                # Show result in main thread
+                if success:
+                    self.after(300, lambda: self.show_success(OUTPUT_PATH))
+                else:
+                    self.after(0, self.reset_progress)
+                    self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
+                    
+            except Exception as e:
+                self.after(0, self.reset_progress)
+                self.after(100, lambda: messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}"))
         
-        DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-        TEMPLATE_PATH = "template/excel/template_rekap_bnsp.xlsx"
-        OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
-        
-    
-        # Export data
-        exporter = export_Excel(TEMPLATE_PATH)
-        success = exporter.export(data_peserta, OUTPUT_PATH)
-        
-        self.update_progress(0.6)
-        if success:
-            messagebox.showinfo(
-                "E✅ Export berhasil!\n",
-                f"File disimpan di: {OUTPUT_PATH}"
-            )
-        else:
-            messagebox.showinfo(
-                "E❌ Export gagal!\n"                
-            )
-        self.update_progress(1.0)
+        # Run in background thread
+        thread = threading.Thread(target=export_thread, daemon=True)
+        thread.start()
     
     def export_awl_report(self):
         """Export AWL Report format"""
+        def export_thread():
+            try:
+                self.after(0, lambda: self.update_progress(0.2))
+                
+                tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
+                data_peserta = []
+                for i, peserta in enumerate(self.peserta_list, start=1):
+                    data_peserta.append({
+                        'no': i,
+                        'nama_peserta': peserta.nama,
+                        'skema': peserta.skema,
+                        'nik': peserta.nik,
+                        'place_DOB': f"{peserta.tempat_lahir}, {peserta.tanggal_lahir}",
+                        'alamat': f"{peserta.alamat}, KEL. {peserta.kelurahan}, KEC. {peserta.kecamatan}, {format_kabupaten(peserta.kabupaten)}, {peserta.provinsi}",
+                        'no_hp': peserta.telepon,
+                        'pendidikan': peserta.pendidikan,
+                        'instansi': peserta.instansi
+                    })
+                
+                DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+                TEMPLATE_PATH = "template/excel/template_awl_report.xlsx"
+                OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[AWL] Peserta BNSP - {tanggal_pelatihan}.xlsx")
+                
+                self.after(0, lambda: self.update_progress(0.5))
+                
+                # Export data
+                exporter = export_Excel(TEMPLATE_PATH)
+                success = exporter.export(data_peserta, OUTPUT_PATH)
+                
+                self.after(0, lambda: self.update_progress(1.0))
+                
+                if success:
+                    self.after(300, lambda: self.show_success(OUTPUT_PATH))
+                else:
+                    self.after(0, self.reset_progress)
+                    self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
+                    
+            except Exception as e:
+                self.after(0, self.reset_progress)
+                self.after(100, lambda: messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}"))
         
-        tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
-        data_peserta = []
-        for i, peserta in enumerate(self.peserta_list, start=1):
-            data_peserta.append({
-                'no': i,
-                'nama_peserta': peserta.nama,
-                'skema': peserta.skema,
-                'nik': peserta.nik,
-                'place_DOB': f"{peserta.tempat_lahir}, {peserta.tanggal_lahir}",
-                'alamat': f"{peserta.alamat}, KEL. {peserta.kelurahan}, KEC. {peserta.kecamatan}, {format_kabupaten(peserta.kabupaten)}, {peserta.provinsi}",
-                'no_hp': peserta.telepon,
-                'pendidikan': peserta.pendidikan,
-                'instansi': peserta.instansi
-            })
-        
-        DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-        TEMPLATE_PATH = "template/excel/template_awl_report.xlsx"
-        OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[AWL] Peserta BNSP - {tanggal_pelatihan}.xlsx")
-        
-    
-        # Export data
-        exporter = export_Excel(TEMPLATE_PATH)
-        success = exporter.export(data_peserta, OUTPUT_PATH)
-        
-        if success:
-            messagebox.showinfo(
-                "E✅ Export berhasil!\n",
-                f"File disimpan di: {OUTPUT_PATH}"
-            )
-        else:
-            messagebox.showinfo(
-                "E❌ Export gagal!\n"                
-            )
-        
-        if self.callback:
-            self.callback()
-        self.destroy()
+        thread = threading.Thread(target=export_thread, daemon=True)
+        thread.start()
     
     def export_dokumen_bnsp(self):
         """Export Dokumen BNSP format"""
         # Check if all files selected
         missing_files = []
+        missing_data = []
         for peserta in self.peserta_list:
             if peserta.id_peserta not in self.selected_files:
                 missing_files.append(peserta.nama)
+            
+            for key, value in peserta.__dict__.items():
+                if key != "instansi" and (value is None or value == ""):
+                    missing_data.append(peserta.nama)
+                    break
         
-        if missing_files:
+        missing_files = list(dict.fromkeys(missing_files))
+        missing_data = list(dict.fromkeys(missing_data))
+
+        if missing_files or missing_data:
+            pesan = ""
+
+            if missing_files:
+                pesan += (
+                    "⚠️ File TTD belum dipilih untuk:\n\n"
+                    + "\n".join(missing_files[:5])
+                )
+                if len(missing_files) > 5:
+                    pesan += f"\n... dan {len(missing_files) - 5} lainnya"
+                pesan += "\n\n"
+
+            if missing_data:
+                pesan += (
+                    "📄 Data belum lengkap untuk:\n\n"
+                    + "\n".join(missing_data[:5])
+                )
+                if len(missing_data) > 5:
+                    pesan += f"\n... dan {len(missing_data) - 5} lainnya"
+
             messagebox.showwarning(
-                "File Belum Lengkap",
-                f"⚠️ File TTD belum dipilih untuk:\n\n" +
-                "\n".join(missing_files[:5]) +
-                (f"\n... dan {len(missing_files)-5} lainnya" if len(missing_files) > 5 else "")
+                "Data Peserta Belum Lengkap",
+                pesan
             )
             return
-
-        # Show and update progress: Starting
-        self.update_progress(0)
         
-        tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
-        
-        DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-        OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
+        def export_thread():
+            try:
+                # Show progress
+                self.after(0, lambda: self.update_progress(0))
                 
-        # Export data
-        exporter = export_Dok_BNSP()
+                tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
+                
+                DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+                OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
+                        
+                # Export data
+                exporter = export_Dok_BNSP()
+                
+                # Create progress callback
+                def on_progress(current, total):
+                    progress = current / total  # 0 to 100%
+                    self.after(0, lambda p=progress: self.update_progress(p))
+                
+                success = exporter.export_dokumen(
+                    tanggal_pelatihan, 
+                    self.peserta_list, 
+                    self.selected_files, 
+                    OUTPUT_PATH,
+                    progress_callback=on_progress
+                )
+                
+                # Update progress: Complete
+                if success:
+                    self.after(0, lambda: self.update_progress(1.0))
+                    # Show success message in center instead of messagebox
+                    self.after(300, lambda: self.show_success(OUTPUT_PATH))
+                else:
+                    self.after(0, self.reset_progress)
+                    self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
+                    
+            except Exception as e:
+                self.after(0, self.reset_progress)
+                self.after(100, lambda: messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}"))
         
-        # Create progress callback
-        def on_progress(current, total):
-            progress = current / total  # 0 to 100%
-            self.update_progress(progress)
-        
-        success = exporter.export_dokumen(
-            tanggal_pelatihan, 
-            self.peserta_list, 
-            self.selected_files, 
-            OUTPUT_PATH,
-            progress_callback=on_progress
-        )
-        
-        # Update progress: Complete
-        if success:
-            self.update_progress(1.0)
-            # Show success message in center instead of messagebox
-            self.after(300, lambda: self.show_success(OUTPUT_PATH))
-        else:
-            self.reset_progress()
-            messagebox.showerror("ERROR", "❌ Export gagal!")
+        # Run in background thread
+        thread = threading.Thread(target=export_thread, daemon=True)
+        thread.start()

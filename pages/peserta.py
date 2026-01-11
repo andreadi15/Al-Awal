@@ -284,7 +284,7 @@ class PesertaPage(ctk.CTkFrame):
         Peserta belum diload sampai section di-expand
         """
         id_sertifikasi = sertif['id_sertifikasi']
-        tanggal_pelatihan = sertif['tanggal_pelatihan']
+        tanggal_pelatihan = return_format_tanggal(sertif['tanggal_pelatihan'])
         
         # Main container
         section_container = ctk.CTkFrame(

@@ -42,7 +42,6 @@ class export_Dok_BNSP:
             output_folder (str): Folder output
             progress_callback (callable): Callback untuk update progress
         """
-
         total = len(peserta_list)
         successful = 0
         for index, peserta in enumerate(peserta_list, start=1):
@@ -188,7 +187,7 @@ class export_Dok_BNSP:
             # Start Word
             if not self.word:
                 self.word = win32.DispatchEx("Word.Application")
-                self.word.Visible = True
+                self.word.Visible = False
             
             # Open template
             doc = self.word.Documents.Open(template_path)
@@ -287,7 +286,7 @@ class export_Dok_BNSP:
             try:
                 # Save document
                 kode = "_".join(os.path.splitext(template_name)[0].replace("dok_", "", 1).split('_')[:-1])
-                filename = f"{row_data['Numbering']}-DOK-{kode.upper()} - {row_data['Name'].upper()} - {row_data['Skema'].upper()}{os.path.splitext(os.path.basename(template_path))}"
+                filename = f"{row_data['Numbering']}-DOK-{kode.upper()} - {row_data['Name'].upper()} - {row_data['Skema'].upper()}{os.path.splitext(os.path.basename(template_path))[1]}"
                 sanitized_filename = "".join(c for c in filename if c.isalnum() or c in " ._-")
                 output_path = os.path.abspath(os.path.join(output_folder, sanitized_filename))
                 try:
