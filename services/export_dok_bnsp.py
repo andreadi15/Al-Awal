@@ -54,7 +54,7 @@ class export_Dok_BNSP:
                     continue
                 all_template_path = [os.path.join(BASE_DIR,TEMPLATE_BASE, v.strip()) for v in all_template_name if v.strip()]
                 # Convert peserta to row format
-                row_data = self._peserta_to_row(tanggal_pelatihan, peserta, ttd_path, index)
+                row_data = self._peserta_to_row(tanggal_pelatihan, peserta, ttd_path[peserta.id_peserta], index)
                 
                 # Process
                 success = self.process_row(index, row_data, all_template_path, output_folder)
@@ -64,13 +64,13 @@ class export_Dok_BNSP:
                 
                 # Update progress
                 if progress_callback:
-                    progress_callback(index, total, peserta.nama, success)
+                    progress_callback(index, total)
                     
             except Exception as e:
                 messagebox.showinfo("Informasi",f"Error processing {peserta.nama}: {str(e)}")
                 continue
         
-        return successful, total
+        return successful
     
     def _peserta_to_row(self, tanggal_pelatihan, peserta, ttd_path, numbering):
         """Convert PesertaModel to row dict"""
@@ -184,7 +184,7 @@ class export_Dok_BNSP:
             
             # Progress display
             template_name = os.path.basename(template_path).split(".")[0]
-
+                
             # Start Word
             if not self.word:
                 self.word = win32.DispatchEx("Word.Application")
@@ -194,128 +194,126 @@ class export_Dok_BNSP:
             doc = self.word.Documents.Open(template_path)
             time.sleep(0.5)
             
-            # Prepare replacements
-            replacements = {}
-            for placeholder, column in placeholder_mapping.items():
-                value = row_data.get(column, '')
-                replacements[placeholder] = str(value) if pd.notna(value) else ""
-            
-            # Get document content
-            content = doc.Content
-            
-            # Replace placeholders
-            progress_steps = len(replacements)
-            for step, (placeholder, replacement) in enumerate(replacements.items(), start=1):              
-                find_obj = content.Find
-                find_obj.ClearFormatting()
+            try:
+                print("[REPLACE] Start replace placeholders")
+                # Prepare replacements
+                replacements = {}
+                for placeholder, column in placeholder_mapping.items():
+                    value = row_data.get(column, '')
+                    replacements[placeholder] = str(value) if pd.notna(value) else ""
                 
-                # Special handling for signature image
-                if placeholder == "ttd_participant" and replacement and os.path.exists(replacement):
-                    try:
-                        while True:
-                            found = find_obj.Execute(
-                                FindText=placeholder,
-                                MatchCase=False,
-                                MatchWholeWord=False,
-                                Forward=True,
-                                Wrap=1,
-                                Replace=0
-                            )
-                            if not found:
-                                break
-                            
-                            rng = find_obj.Parent
-                            rng.Text = ""
-                            
-                            # Insert image
-                            shape = rng.InlineShapes.AddPicture(
-                                FileName=replacement,
-                                LinkToFile=False,
-                                SaveWithDocument=True
-                            )
-                            
-                            # Resize image
-                            if "kpt-c" in template_path and "a" in template_name:
-                                max_width = 85.05
-                                max_height = 56.7
-                            else:
-                                max_width = 113.4
-                                max_height = 70.9
-                            
-                            w, h = shape.Width, shape.Height
-                            ratio = min(max_width / w, max_height / h)
-                            shape.Width = w * ratio
-                            shape.Height = h * ratio
-                            
-                    except Exception as e:
-                        print(f'\n{color.RED}Error: TTD image not found or invalid{Style.RESET_ALL}')
-                        doc.Close(SaveChanges=False)
-                        return False
-                else:
-                    # Text replacement
-                    find_obj.Text = placeholder
-                    find_obj.Replacement.ClearFormatting()
-                    find_obj.Replacement.Text = replacement
-                    find_obj.Execute(
-                        FindText=placeholder,
-                        MatchCase=False,
-                        MatchWholeWord=False,
-                        MatchWildcards=False,
-                        MatchSoundsLike=False,
-                        MatchAllWordForms=False,
-                        Forward=True,
-                        Wrap=1,
-                        Format=False,
-                        ReplaceWith=replacement,
-                        Replace=wdReplaceAll
-                    )
+                # Get document content
+                content = doc.Content
                 
-                # percent = step / progress_steps * 100
-                # bar = f"{'#' * (step * 2)}{'-' * ((progress_steps - step) * 2)}"
-                # if tipe == "a":
-                #     print(f'{index}.{nama_display.ljust(15)} {template_name.ljust(30)} [{bar}] {percent:5.0f}%', end='\r', flush=True)
-                # else:
-                #     prefix = "   " if index >= 10 else "  "
-                #     print(f'{prefix}{nama_display.ljust(15)} {template_name.ljust(30)} [{bar}] {percent:5.0f}%', end='\r', flush=True)
-            
-            # Save document
-            kode = "_".join(os.path.splitext(template_name)[0].replace("dok_", "", 1).split('_')[:-1])
-            filename = f"{row_data['Numbering']}-DOK-{kode.upper()} - {row_data['Name'].upper()} - {row_data['Skema'].upper()}.docx"
-            sanitized_filename = "".join(c for c in filename if c.isalnum() or c in " ._-")
-            output_path = os.path.abspath(os.path.join(output_folder, sanitized_filename))
+                # Replace placeholders
+                progress_steps = len(replacements)
+                for step, (placeholder, replacement) in enumerate(replacements.items(), start=1):              
+                    find_obj = content.Find
+                    find_obj.ClearFormatting()
+                    
+                    # Special handling for signature image
+                    if placeholder == "ttd_participant" and replacement and os.path.exists(replacement):
+                        try:
+                            while True:
+                                found = find_obj.Execute(
+                                    FindText=placeholder,
+                                    MatchCase=False,
+                                    MatchWholeWord=False,
+                                    Forward=True,
+                                    Wrap=1,
+                                    Replace=0
+                                )
+                                if not found:
+                                    break
+                                
+                                rng = find_obj.Parent
+                                rng.Text = ""
+                                
+                                # Insert image
+                                shape = rng.InlineShapes.AddPicture(
+                                    FileName=replacement,
+                                    LinkToFile=False,
+                                    SaveWithDocument=True
+                                )
+                                
+                                # Resize image
+                                if "kpt-c" in template_path and "a" in template_name:
+                                    max_width = 85.05
+                                    max_height = 56.7
+                                else:
+                                    max_width = 113.4
+                                    max_height = 70.9
+                                
+                                w, h = shape.Width, shape.Height
+                                ratio = min(max_width / w, max_height / h)
+                                shape.Width = w * ratio
+                                shape.Height = h * ratio
+                                
+                        except Exception as e:
+                            print(f'\n{color.RED}Error: TTD image not found or invalid{Style.RESET_ALL}')
+                            doc.Close(SaveChanges=False)
+                            return False
+                    else:
+                        # Text replacement
+                        find_obj.Text = placeholder
+                        find_obj.Replacement.ClearFormatting()
+                        find_obj.Replacement.Text = replacement
+                        find_obj.Execute(
+                            FindText=placeholder,
+                            MatchCase=False,
+                            MatchWholeWord=False,
+                            MatchWildcards=False,
+                            MatchSoundsLike=False,
+                            MatchAllWordForms=False,
+                            Forward=True,
+                            Wrap=1,
+                            Format=False,
+                            ReplaceWith=replacement,
+                            Replace=wdReplaceAll
+                        )
+                    
+                    # percent = step / progress_steps * 100
+                    # bar = f"{'#' * (step * 2)}{'-' * ((progress_steps - step) * 2)}"
+                    # if tipe == "a":
+                    #     print(f'{index}.{nama_display.ljust(15)} {template_name.ljust(30)} [{bar}] {percent:5.0f}%', end='\r', flush=True)
+                    # else:
+                    #     prefix = "   " if index >= 10 else "  "
+                    #     print(f'{prefix}{nama_display.ljust(15)} {template_name.ljust(30)} [{bar}] {percent:5.0f}%', end='\r', flush=True)
+            except Exception as e:
+                print("[REPLACE] Error saat replace")
+                print(e)
+                raise
             
             try:
-                doc.SaveAs2(output_path)
-            except AttributeError:
-                doc.SaveAs(output_path)
-            
-            # logging.info(f"Generated document: {output_path}")
-            
-            # Close document
-            doc.Close(SaveChanges=False)
-            
-            # Final progress
-            # if tipe == "a":
-            #     print(f'{index}.{nama_display.ljust(15)} {template_name.ljust(30)} [{color.GREEN}{"#" * 20}{Style.RESET_ALL}] {100:5.0f}%')
-            # else:
-            #     prefix = "   " if index >= 10 else "  "
-            #     print(f'{prefix}{nama_display.ljust(15)} {template_name.ljust(30)} [{color.GREEN}{"#" * 20}{Style.RESET_ALL}] {100:5.0f}%')
-            
+                # Save document
+                kode = "_".join(os.path.splitext(template_name)[0].replace("dok_", "", 1).split('_')[:-1])
+                filename = f"{row_data['Numbering']}-DOK-{kode.upper()} - {row_data['Name'].upper()} - {row_data['Skema'].upper()}{os.path.splitext(os.path.basename(template_path))}"
+                sanitized_filename = "".join(c for c in filename if c.isalnum() or c in " ._-")
+                output_path = os.path.abspath(os.path.join(output_folder, sanitized_filename))
+                try:
+                    doc.SaveAs2(output_path)
+                except AttributeError:
+                    doc.SaveAs(output_path)
+            except Exception as e:
+                print("[SAVE] Error saat save")
+                print(e)
+                raise
+                
             time.sleep(0.5)
             return True
             
         except Exception as e:
-            # logging.error(f"Error generating document: {str(e)}")
-            # import traceback
-            # logging.error(f"Detailed error: {traceback.format_exc()}")
-            messagebox.showinfo("Error",e)
-            try:
-                if 'doc' in locals():
-                    doc.Close(SaveChanges=False)
-            except:
-                pass
-            
+            print("[DOC] Gagal generate dokumen")
+            print(e)
             return False
+        finally:
+            if doc:
+                try:
+                    doc.Close(SaveChanges=False)
+                    print("[CLOSE] Document closed")
+                except Exception as e:
+                    print("[CLOSE] Gagal close document")
+                    print(e)
     
     def cleanup(self):
         """Cleanup Word instance"""

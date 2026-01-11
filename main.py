@@ -18,7 +18,12 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-
+        for obj in ["shape", "rng", "find_obj", "content", "doc"]:
+            if obj in locals():
+                del locals()[obj]
+                
+        import gc
+        gc.collect()
         ctk.set_appearance_mode("dark")
 
         self.title("APP KU")
