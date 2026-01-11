@@ -42,10 +42,12 @@ class export_Dok_BNSP:
             output_folder (str): Folder output
             progress_callback (callable): Callback untuk update progress
         """
+        # 
         total = len(peserta_list)
         successful = 0
         for index, peserta in enumerate(peserta_list, start=1):
             try:
+                variable = 0
                 # Get skema_alt from map
                 all_template_name = TEMPLATE_DOK_BNSP.get(peserta.skema)
                 if not all_template_name:
