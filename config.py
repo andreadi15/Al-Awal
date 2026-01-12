@@ -41,3 +41,5 @@ NAMA_PERUSAHAAN = CONFIG['general']['nama_perusahaan']
 LOKASI_PERUSAHAAN = CONFIG['general']['lokasi_perusahaan']
 TEMPLATE_DOK_BNSP = CONFIG['template']
 TEMPLATE_BASE = CONFIG['general']['template_base'].replace("/","\\")
+TEMPLATE_AWL_REPORT = CONFIG['general']['template_awl_report'].replace("/","\\")
+TEMPLATE_REKAP_BNSP = CONFIG['general']['template_rekap_bnsp'].replace("/","\\")

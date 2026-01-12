@@ -5,6 +5,8 @@ general.nama_perusahaan = Al-Awal Consultant Indonesia
 general.lokasi_perusahaan = DURI
 general.email = alawal.consultan@gmail.com
 general.template_base = template/BNSP
+general.template_rekap_bnsp = template/excel/template_rekap_bnsp.xlsx
+general.template_awl_report = template/excel/template_awl_report.xlsx
 
 # =========================
 # TEMPLATE CONFIG

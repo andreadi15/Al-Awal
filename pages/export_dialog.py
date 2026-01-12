@@ -5,11 +5,9 @@ import customtkinter as ctk
 from tkinter import messagebox, filedialog
 from services.export_excel import export_Excel
 from services.export_dok_bnsp import export_Dok_BNSP
-from config import NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN
+from config import NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN,TEMPLATE_AWL_REPORT,TEMPLATE_REKAP_BNSP
 from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
 import os, threading
-from datetime import datetime
-from pages.peserta_model import PesertaModel
 
 class ExportDialog(ctk.CTkToplevel):
     def __init__(self, parent, peserta_list, sertifikasi_info, callback):
@@ -515,14 +513,13 @@ class ExportDialog(ctk.CTkToplevel):
                     })
                 
                 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-                TEMPLATE_PATH = "template/excel/template_rekap_bnsp.xlsx"
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
                 
                 # Update progress
                 self.after(0, lambda: self.update_progress(0.5))
                 
                 # Export data
-                exporter = export_Excel(TEMPLATE_PATH)
+                exporter = export_Excel(TEMPLATE_REKAP_BNSP)
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
                 # Update progress
@@ -565,13 +562,12 @@ class ExportDialog(ctk.CTkToplevel):
                     })
                 
                 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-                TEMPLATE_PATH = "template/excel/template_awl_report.xlsx"
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[AWL] Peserta BNSP - {tanggal_pelatihan}.xlsx")
                 
                 self.after(0, lambda: self.update_progress(0.5))
                 
                 # Export data
-                exporter = export_Excel(TEMPLATE_PATH)
+                exporter = export_Excel(TEMPLATE_AWL_REPORT)
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
                 self.after(0, lambda: self.update_progress(1.0))
