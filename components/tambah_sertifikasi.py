@@ -69,7 +69,7 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
         self.sertifikasi_entry = ctk.CTkComboBox(
             form_frame,
             height=45,
-            values=list(SERTIFIKASI_OPTIONS.keys()),
+            values=SERTIFIKASI_OPTIONS,
             font=("Arial", 14, "bold")
         )
         self.sertifikasi_entry.pack(fill="x", pady=(0, 20))

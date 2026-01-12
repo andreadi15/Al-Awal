@@ -21,24 +21,31 @@ def load_config(path):
             key = key.strip()
             value = value.strip()
 
+            # =========================
             # GENERAL
+            # =========================
             if key.startswith("general."):
-                sub_key = key.replace("general.", "", 1)
-                config["general"][sub_key] = value
+                sub_key = key[len("general."):]
 
+                if ',' in value:
+                    config["general"][sub_key] = [
+                        v.strip() for v in value.split(',') if v.strip()
+                    ]
+                else:
+                    config["general"][sub_key] = value
+
+            # =========================
             # TEMPLATE
+            # =========================
             elif key.startswith("template."):
-                skema = key.replace("template.", "", 1)
+                skema = key[len("template."):]
 
-                templates = [
-                    v.strip()
-                    for v in value.split(',')
-                    if v.strip()
+                config["template"][skema] = [
+                    v.strip() for v in value.split(',') if v.strip()
                 ]
 
-                config["template"][skema] = templates
-
     return config
+
 
 def format_tanggal(tanggal):
     if not tanggal or not tanggal.strip():

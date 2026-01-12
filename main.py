@@ -2,7 +2,6 @@
 # FILE: main.py
 # =======================
 import customtkinter as ctk
-# from config import DATA_PESERTA
 from pages.dashboard import DashboardPage
 from pages.peserta import PesertaPage
 from pages.inputpeserta import InputPesertaPage

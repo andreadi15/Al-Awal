@@ -6,7 +6,9 @@ class PesertaValidator:
     @staticmethod
     def validate(peserta: PesertaModel):
         errors = {}
-        
+        if "<pilih skema>" in peserta.skema.strip().lower():
+            errors["skema"] = "Skema wajib dipilih"
+            
         if not peserta.nama.strip():
             errors["nama"] = "Nama lengkap harus diisi"
             
