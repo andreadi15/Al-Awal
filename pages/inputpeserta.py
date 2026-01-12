@@ -2,7 +2,12 @@ import customtkinter as ctk
 from tkinter import messagebox
 import re, uuid
 from models.peserta_model import PesertaModel
-from services.database import DB_Save_Peserta,DB_Get_All_Sertifikasi,DB_Get_Peserta_By_Id,DB_Get_Peserta_By_Sertifikasi
+from services.database import (
+    DB_Save_Peserta,
+    DB_Get_All_Sertifikasi,
+    DB_Get_Peserta_By_Id,
+    DB_Get_Peserta_By_Sertifikasi,
+    DB_Delete_Peserta_By_Sertifikasi)
 from components import peserta_validator,create_entry,form_row,nik_entry
 from config import SERTIFIKASI_OPTIONS,SKEMA_OPTIONS,PENDIDIKAN_OPTIONS
 
@@ -826,57 +831,42 @@ class InputPesertaPage(ctk.CTkFrame):
                 row += 1
     
     def jump_to_peserta(self, index):
-        """Jump ke peserta tertentu"""
         for key, w in self.entries.items():
             w.clear_error()
             
-        # Simpan data saat ini dulu
         if self._cek_form_filled():
             peserta = self.collect_form()
             if self.current_index < len(self.list_peserta):
                 self.list_peserta[self.current_index] = peserta
             else:
-                # Form saat ini adalah peserta baru yang belum tersimpan
                 self.list_peserta.append(peserta)
         
-        # Pindah ke index yang dipilih
         self.current_index = index
         self.load_form(self.list_peserta[self.current_index])
-        
-        # Update UI
         self.refresh_UI_Form()
     
     def delete_peserta(self, index):
-        """Hapus peserta tertentu"""
         if messagebox.askyesno("Konfirmasi", f"Hapus data peserta #{index + 1}?"):
             self.list_peserta.pop(index)
             
-            # Adjust current index
             if self.current_index >= len(self.list_peserta):
                 self.current_index = max(0, len(self.list_peserta) - 1)
             elif self.current_index > index:
-                # Jika hapus peserta sebelum current, geser index
                 self.current_index -= 1
                 
-            # Load data atau reset
             if len(self.list_peserta) > 0:
                 if self.current_index < len(self.list_peserta):
-                    # Load peserta yang ada
                     self.load_form(self.list_peserta[self.current_index])
                 else:
-                    # Current index di luar range, berarti form baru
                     self.clear_form()
             else:
                 self.clear_form()
                 self.current_index = 0
-                # Hide data container
                 self.data_container_wrapper.pack_forget()
             
-            # Update UI
             self.refresh_UI_Form()
     
     def delete_all_data(self):
-        """Hapus semua data peserta"""
         if len(self.list_peserta) == 0:
             messagebox.showinfo("Info", "Tidak ada data untuk dihapus")
             return
@@ -886,18 +876,13 @@ class InputPesertaPage(ctk.CTkFrame):
             self.current_index = 0
             self.clear_form()
             
-            # Hide data container
             self.data_container_wrapper.pack_forget()
-            
-            # Update UI
             self.refresh_UI_Form()
     
     def save_all_data(self):
-        """Simpan semua data peserta"""
         if len(self.sertifikasi) <= 0:
             return
             
-        # Validasi form saat ini terlebih dahulu
         peserta = self.collect_form()
         errors = peserta_validator.PesertaValidator.validate(peserta)
         if errors:
@@ -908,13 +893,11 @@ class InputPesertaPage(ctk.CTkFrame):
             self.form_frame.focus_set()
             return
         
-        # Simpan peserta terakhir
         if self.current_index < len(self.list_peserta):
             self.list_peserta[self.current_index] = peserta
         else:
             self.list_peserta.append(peserta)
         
-        # Cek apakah ada peserta yang akan disimpan
         if len(self.list_peserta) == 0:
             messagebox.showwarning(
                 "Peringatan",
@@ -922,16 +905,12 @@ class InputPesertaPage(ctk.CTkFrame):
             )
             return
         
-        # 🔥 CEK PERUBAHAN DATA
         try:
             changes = self._compare_data_changes()
-            
             if changes['has_changes']:
-                # Ada perubahan, tampilkan konfirmasi dengan detail
                 if not self._show_changes_dialog(changes):
-                    return  # User cancel
+                    return  
             else:
-                # Tidak ada perubahan sama sekali
                 messagebox.showinfo(
                     "Info",
                     "Tidak ada perubahan data untuk disimpan."
@@ -939,14 +918,12 @@ class InputPesertaPage(ctk.CTkFrame):
                 return
                 
         except Exception as e:
-            # Jika error saat compare (misal data baru semua), langsung tanya
             if not messagebox.askyesno(
                 "Konfirmasi",
                 f"Simpan {len(self.list_peserta)} peserta?"
             ):
                 return
         
-        # Panggil fungsi simpan
         try:
             self.simpan_peserta(self.list_peserta)
             
@@ -955,7 +932,6 @@ class InputPesertaPage(ctk.CTkFrame):
                 f"Berhasil menyimpan {len(self.list_peserta)} peserta!"
             )
             
-            # Reload data dari database
             self.load_peserta_from_sertifikasi()
             self.refresh_UI_Form()
             
@@ -963,33 +939,13 @@ class InputPesertaPage(ctk.CTkFrame):
             messagebox.showerror("Error", f"Gagal menyimpan data: {str(e)}")
     
     def simpan_peserta(self, list_peserta):
-        """
-        Fungsi untuk menyimpan semua peserta
-        - Hapus semua peserta lama dari sertifikasi ini
-        - Simpan ulang semua peserta baru
-        Parameter: list_peserta (List[PesertaModel])
-        """
-        print("=" * 50)
-        print("MENYIMPAN DATA PESERTA")
-        print("=" * 50)
-        
-        try:
-            # Import functions
-            from services.database import DB_Delete_Peserta_By_Sertifikasi
-            
-            # 1. Hapus semua peserta lama dari sertifikasi ini
-            print(f"Menghapus data peserta lama untuk sertifikasi: {self.selected_id_sertifikasi}")
+        try:            
             DB_Delete_Peserta_By_Sertifikasi(self.selected_id_sertifikasi)
             
-            # 2. Simpan semua peserta baru
             for i, peserta in enumerate(list_peserta, start=1):
                 print(f"{i}. Saving Data {peserta.nama}")
                 DB_Save_Peserta(peserta, self.selected_id_sertifikasi)
             
-            print("\n" + "=" * 50)
-            print(f"Total: {len(list_peserta)} peserta")
-            print("=" * 50)
-            
         except Exception as e:
-            print(f"[ERROR] Gagal menyimpan peserta: {e}")
+            messagebox.showerror("Err",f"[ERROR] Gagal menyimpan peserta: {e}")
             raise e
