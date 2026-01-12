@@ -16,12 +16,10 @@ from services.logic import format_kabupaten,format_tanggal_to_general
 class export_Dok_BNSP:
     
     def __init__(self):
-        """Initialize exporter"""
         self.word = None
         self.setup_dependencies()
     
     def setup_dependencies(self):
-        """Setup required dependencies"""
         try:
             import win32com.client
         except ImportError:

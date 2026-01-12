@@ -9,7 +9,7 @@ from services.database import (
     DB_Get_Peserta_By_Sertifikasi,
     DB_Delete_Peserta_By_Sertifikasi)
 from components import peserta_validator,create_entry,form_row,nik_entry
-from config import SERTIFIKASI_OPTIONS,SKEMA_OPTIONS,PENDIDIKAN_OPTIONS
+from config import PENDIDIKAN_OPTIONS,TEMPLATE_DOK_BNSP
 
 class InputPesertaPage(ctk.CTkFrame):
     def __init__(self, parent, id_sertifikasi=None):
@@ -175,7 +175,7 @@ class InputPesertaPage(ctk.CTkFrame):
         current_row = 1
         
         # 1. Skema (ComboBox)
-        entry = create_entry.createEntry(form_content, "combobox", options=SKEMA_OPTIONS)
+        entry = create_entry.createEntry(form_content, "combobox", options=list(TEMPLATE_DOK_BNSP.keys()))
         self.entries["skema"] = entry.widget
         form_row.FormRow(form_content, current_row, "Skema", self.entries["skema"])
         current_row += 2
@@ -243,7 +243,7 @@ class InputPesertaPage(ctk.CTkFrame):
         current_row += 2
         
         # 12. Pendidikan Terakhir
-        entry = create_entry.createEntry(form_content, "combobox",options=PENDIDIKAN_OPTIONS)
+        entry = create_entry.createEntry(form_content, "combobox",options=list(PENDIDIKAN_OPTIONS.keys()))
         self.entries["pendidikan"] = entry.widget
         form_row.FormRow(form_content, current_row, "Pendidikan Terakhir", self.entries["pendidikan"])
         current_row += 2

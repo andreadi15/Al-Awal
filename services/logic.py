@@ -1,5 +1,6 @@
 from datetime import datetime
 from models.peserta_model import PesertaModel
+
 def load_config(path):
     config = {
         "general": {},
@@ -39,19 +40,16 @@ def load_config(path):
 
     return config
 
-
 def format_tanggal(tanggal):
-    """Convert berbagai format tanggal ke YYYY-MM-DD"""
     if not tanggal or not tanggal.strip():
         return None
     
     tanggal = tanggal.strip()
     
-    # Try multiple formats
     formats = [
         "%d/%m/%Y",   # 17/12/2025
         "%d-%m-%Y",   # 17-12-2025
-        "%Y-%m-%d",   # 2025-12-17 (already correct)
+        "%Y-%m-%d",   # 2025-12-17 
         "%Y/%m/%d",   # 2025/12/17
     ]
     
@@ -64,7 +62,6 @@ def format_tanggal(tanggal):
     return None
     
 def return_format_tanggal(tanggal):
-    """Convert berbagai format tanggal ke DD-MM-YYYY"""
     if not tanggal or not tanggal.strip():
         return None
 
@@ -73,7 +70,7 @@ def return_format_tanggal(tanggal):
     formats = [
         "%Y-%m-%d",   # 2025-12-17
         "%Y/%m/%d",   # 2025/12/17
-        "%d-%m-%Y",   # 17-12-2025 (already correct)
+        "%d-%m-%Y",   # 17-12-2025 
         "%d/%m/%Y",   # 17/12/2025
     ]
 

@@ -4,29 +4,6 @@ import os
 from tkinter import messagebox
 import sys
 
-SKEMA_OPTIONS = [
-    "Skema A",
-    "Skema B",
-    "Skema C",
-    "Skema D"
-]
-
-PENDIDIKAN_OPTIONS = [
-    "SD",
-    "SMP",
-    "SMA/SMK",
-    "D3",
-    "S1",
-    "S2",
-    "S3"
-]
-
-SERTIFIKASI_OPTIONS = [
-    "BNSP",
-    "CEPU",
-    "IADC"
-]
-
 if os.path.exists("config.txt"):
     CONFIG = load_config("config.txt")
 else:
@@ -43,3 +20,6 @@ TEMPLATE_DOK_BNSP = CONFIG['template']
 TEMPLATE_BASE = CONFIG['general']['template_base'].replace("/","\\")
 TEMPLATE_AWL_REPORT = CONFIG['general']['template_awl_report'].replace("/","\\")
 TEMPLATE_REKAP_BNSP = CONFIG['general']['template_rekap_bnsp'].replace("/","\\")
+
+PENDIDIKAN_OPTIONS = CONFIG['general']['pendidikan_option']
+SERTIFIKASI_OPTIONS = CONFIG['general']['sertifikasi_option']
