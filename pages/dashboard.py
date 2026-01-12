@@ -8,11 +8,9 @@ class DashboardPage(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent, fg_color="transparent")
         
-        # Scrollable content
         scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=25, pady=25)
         
-        # Header
         ctk.CTkLabel(
             scroll,
             text="Dashboard",
@@ -26,7 +24,6 @@ class DashboardPage(ctk.CTkFrame):
             text_color="#888888"
         ).pack(anchor="w", pady=(0, 30))
         
-        # Stats Cards
         stats_frame = ctk.CTkFrame(scroll, fg_color="transparent")
         stats_frame.pack(fill="x", pady=(0, 20))
         
@@ -42,7 +39,6 @@ class DashboardPage(ctk.CTkFrame):
             ctk.CTkLabel(card, text=value, font=("Arial", 32, "bold")).pack(pady=(20, 5))
             ctk.CTkLabel(card, text=title, font=("Arial", 13)).pack(pady=(0, 20))
         
-        # Content Cards
         for i in range(5):
             card = ctk.CTkFrame(scroll, fg_color="#333333", corner_radius=12, height=120)
             card.pack(fill="x", pady=8)

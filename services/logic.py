@@ -1,5 +1,5 @@
 from datetime import datetime
-from pages.peserta_model import PesertaModel
+from models.peserta_model import PesertaModel
 def load_config(path):
     config = {
         "general": {},

@@ -4,9 +4,8 @@
 import customtkinter as ctk
 from tkinter import messagebox
 import uuid
-from datetime import datetime
-from pages.peserta_model import PesertaModel
-from services.database import DB_Save_Peserta_Batch, DB_Save_Sertifikasi
+from models.peserta_model import PesertaModel
+from services.database import DB_Save_Peserta_Batch
 from services.logic import format_tanggal
 
 class ImportDialog(ctk.CTkToplevel):
@@ -17,18 +16,13 @@ class ImportDialog(ctk.CTkToplevel):
         self.callback = callback
         self.parsed_data = []
         
-        # Window setup
         self.title("📥 Import Data dari Excel")
         self.geometry("1000x500")
         self.resizable(False, False)
         
-        # Make modal
         self.transient(parent)
         self.grab_set()
-        
-        # Center window
         self.center_window()
-        
         self.create_widgets()
         
     def center_window(self):
@@ -40,7 +34,6 @@ class ImportDialog(ctk.CTkToplevel):
         self.geometry(f'{width}x{height}+{x}+{y}')
    
     def create_widgets(self):
-        # Header
         header = ctk.CTkFrame(self, fg_color="#1a73e8", height=70)
         header.pack(fill="x")
         header.pack_propagate(False)
@@ -54,8 +47,7 @@ class ImportDialog(ctk.CTkToplevel):
         
         combo_frame = ctk.CTkFrame(self, fg_color="#1f1f1f")
         combo_frame.pack(fill="x", padx=20, pady=(0, 15))
-        
-        # Sertifikasi Selection
+    
         sertif_container = ctk.CTkFrame(combo_frame, fg_color="transparent")
         sertif_container.pack(side="left", padx=15, pady=10)
         
@@ -65,7 +57,6 @@ class ImportDialog(ctk.CTkToplevel):
             font=("Arial", 13, "bold")
         ).pack(side="left", padx=(0, 8))
         
-        # Load sertifikasi options
         from services.database import DB_Get_All_Sertifikasi
         self.all_sertifikasi = DB_Get_All_Sertifikasi()
         sertif_options = self._generate_sertifikasi_options()
@@ -79,14 +70,12 @@ class ImportDialog(ctk.CTkToplevel):
         )
         self.sertif_combo.pack(side="left")
         
-        # Set default value berdasarkan parameter
         if self.id_sertifikasi and sertif_options:
             self._set_sertifikasi_by_id(self.id_sertifikasi)
         elif sertif_options:
             self.sertif_combo.set(sertif_options[0])
             self._update_selected_id()
         
-        # Format Selection
         format_container = ctk.CTkFrame(combo_frame, fg_color="transparent")
         format_container.pack(side="left", padx=15, pady=10)
         
@@ -106,7 +95,6 @@ class ImportDialog(ctk.CTkToplevel):
         self.format_combo.set("AWL-Copy")
         self.format_combo.pack(side="left")
         
-        # Textarea untuk paste
         text_frame = ctk.CTkFrame(self, fg_color="transparent")
         text_frame.pack(fill="both", expand=True, padx=20, pady=(0, 15))
         
@@ -123,7 +111,6 @@ class ImportDialog(ctk.CTkToplevel):
         )
         self.text_area.pack(fill="both", expand=True)
         
-        # Preview area (hidden initially)
         self.preview_frame = ctk.CTkFrame(self, fg_color="#1f1f1f")
         self.preview_label = ctk.CTkLabel(
             self.preview_frame,
@@ -133,7 +120,6 @@ class ImportDialog(ctk.CTkToplevel):
         )
         self.preview_label.pack(pady=10)
         
-        # Buttons
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         btn_frame.pack(fill="x", padx=20, pady=(0, 20))
         
@@ -175,7 +161,6 @@ class ImportDialog(ctk.CTkToplevel):
         self.sertifikasi_map = {}
         
         for sert in self.all_sertifikasi:
-            # Truncate nama jika terlalu panjang
             nama = sert["sertifikasi"]
             if len(nama) > 30:
                 nama = nama[:27] + "..."
@@ -183,14 +168,12 @@ class ImportDialog(ctk.CTkToplevel):
             tanggal = sert["tanggal_pelatihan"]
             display_text = f"{nama} - {tanggal}"
             
-            # Simpan mapping
             self.sertifikasi_map[display_text] = sert["id_sertifikasi"]
             options.append(display_text)
         
         return options
 
     def _set_sertifikasi_by_id(self, id_sertifikasi):
-        """Set combo box berdasarkan ID yang dikirim"""
         for display_text, sert_id in self.sertifikasi_map.items():
             if sert_id == id_sertifikasi:
                 self.sertif_combo.set(display_text)
@@ -198,12 +181,10 @@ class ImportDialog(ctk.CTkToplevel):
                 return
 
     def _update_selected_id(self):
-        """Update id_sertifikasi berdasarkan combo box"""
         current_text = self.sertif_combo.get()
         self.id_sertifikasi = self.sertifikasi_map.get(current_text, "")
    
     def parse_data(self):
-        """Parse data based on selected format"""
         format_type = self.format_combo.get()
         
         if format_type == "AWL-Copy":
@@ -216,7 +197,6 @@ class ImportDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", "Format tidak dikenali!")
     
     def parse_awl_copy(self):
-        """Parse AWL-Copy format"""
         raw_text = self.text_area.get("1.0", "end-1c").strip()
         
         if not raw_text:
@@ -230,7 +210,6 @@ class ImportDialog(ctk.CTkToplevel):
                 messagebox.showerror("Error", "Format data tidak valid! Minimal harus ada header dan 1 peserta.")
                 return
             
-            # Parse header (line pertama)
             header_line = lines[0]
             header_data = self.extract_fields(header_line)
             print(header_data)
@@ -247,7 +226,6 @@ class ImportDialog(ctk.CTkToplevel):
             nama_sertifikasi = header_data[1]
             tanggal_pelatihan = format_tanggal(header_data[2])
             
-            # Parse peserta (baris selanjutnya)
             self.parsed_data = []
             errors = []
             
@@ -264,7 +242,7 @@ class ImportDialog(ctk.CTkToplevel):
                     
                     peserta = PesertaModel(
                         id_peserta= f"PSRT-{uuid.uuid4().hex[:8].upper()}",
-                        id_sertifikasi="",  # Will be filled when saving
+                        id_sertifikasi="",  
                         skema=fields[2],
                         nama=fields[1],
                         nik=fields[3],
@@ -289,7 +267,6 @@ class ImportDialog(ctk.CTkToplevel):
                 except Exception as e:
                     errors.append(f"Baris {i}: Error parsing - {str(e)}")
             
-            # Show results
             if errors:
                 error_msg = "\n".join(errors[:5])
                 if len(errors) > 5:
@@ -321,7 +298,6 @@ class ImportDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", f"Gagal parsing data:\n{str(e)}")
     
     def extract_fields(self, line):
-        """Extract fields from AWL-Copy format: ⟦field1⟧⟦field2⟧..."""
         fields = []
         current_field = ""
         in_bracket = False
@@ -339,7 +315,6 @@ class ImportDialog(ctk.CTkToplevel):
         return fields
     
     def parse_rekap_bnsp(self):
-        """Parse Excel TAB-separated format (19 kolom)"""
         raw_text = self.text_area.get("1.0", "end-1c").strip()
         
         if not raw_text:
@@ -355,67 +330,58 @@ class ImportDialog(ctk.CTkToplevel):
                 if not line.strip():
                     continue
                 
-                # Split by TAB
                 cols = line.split('\t')
                 
-                # Skip header (jika ada kata "NO" atau "TUK" di kolom pertama)
                 if i == 1 and (cols[0].upper().strip() in ['NO', 'TUK']):
                     continue
                 
-                # Validasi minimal 19 kolom
                 if len(cols) < 19:
                     errors.append(f"Baris {i}: Kurang kolom (hanya {len(cols)})")
                     continue
                 
                 try:
-                    # Parse alamat (kolom 11)
                     alamat_full = cols[11].strip()
                     parsed_address = self.parse_alamat(alamat_full)
-                    
-                    # Format tanggal lahir dari DD/MM/YYYY ke YYYY-MM-DD
+                   
                     tgl_lahir = cols[9].strip()
                     tgl_lahir_formatted = format_tanggal(tgl_lahir)
                     if not tgl_lahir_formatted:
                         errors.append(f"Baris {i}: Format tanggal lahir tidak valid ({tgl_lahir})")
                         continue
-                    
-                    # Format tanggal pelatihan
+
                     tgl_pelatihan = cols[4].strip()
                     tgl_pelatihan_formatted = format_tanggal(tgl_pelatihan)
                     if not tgl_pelatihan_formatted:
                         errors.append(f"Baris {i}: Format tanggal pelatihan tidak valid ({tgl_pelatihan})")
                         continue
                     
-                    # Create PesertaModel
                     peserta = PesertaModel(
                         id_peserta= f"PSRT-{uuid.uuid4().hex[:8].upper()}",
-                        id_sertifikasi="",  # Will be filled when saving
-                        skema=cols[6].strip(),           # Bidang Kompetensi
-                        nama=cols[5].strip(),            # Nama
-                        nik=cols[7].strip(),             # NIK
-                        tempat_lahir=cols[8].strip(),    # Tempat Lahir
+                        id_sertifikasi="",  
+                        skema=cols[6].strip(),           
+                        nama=cols[5].strip(),          
+                        nik=cols[7].strip(),            
+                        tempat_lahir=cols[8].strip(),    
                         tanggal_lahir=tgl_lahir_formatted,
                         alamat=parsed_address['alamat'],
                         kelurahan=parsed_address['kelurahan'],
                         kecamatan=parsed_address['kecamatan'],
-                        kabupaten=cols[12].strip(),      # Kab/Kota
-                        provinsi=cols[13].strip(),       # Provinsi
-                        telepon=cols[14].replace("-","").strip(),        # No. HP
-                        pendidikan=cols[16].strip(),     # Pendidikan
-                        instansi=cols[18].strip()        # Institusi
+                        kabupaten=cols[12].strip(), 
+                        provinsi=cols[13].strip(),       
+                        telepon=cols[14].replace("-","").strip(),        
+                        pendidikan=cols[16].strip(),   
+                        instansi=cols[18].strip()       
                     )
                     
-                    # Store dengan info sertifikasi
                     self.parsed_data.append({
                         'peserta': peserta,
                         'tanggal_pelatihan': tgl_pelatihan_formatted,
-                        'nama_sertifikasi': cols[1].strip()  # TUK
+                        'nama_sertifikasi': cols[1].strip()  
                     })
                     
                 except Exception as e:
                     errors.append(f"Baris {i}: Error parsing - {str(e)}")
             
-            # Show results
             if errors:
                 error_msg = "\n".join(errors[:5])
                 if len(errors) > 5:
@@ -444,7 +410,6 @@ class ImportDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", f"Gagal parsing data:\n{str(e)}")
 
     def parse_awl_report(self):
-        """Parse AWL Report format (8 kolom dengan alamat gabungan)"""
         raw_text = self.text_area.get("1.0", "end-1c").strip()
         
         if not raw_text:
@@ -460,21 +425,17 @@ class ImportDialog(ctk.CTkToplevel):
                 if not line.strip():
                     continue
                 
-                # Split by TAB
                 cols = line.split('\t')
                 
-                # Skip header (jika ada kata "NO" atau "Nama" di kolom pertama/kedua)
-                if i <= 2:  # Skip 2 baris pertama (header ganda)
+                if i <= 2: 
                     if any(keyword in cols[0].upper().strip() for keyword in ['NO', 'NAMA', 'DATA']):
                         continue
                 
-                # Validasi minimal 8 kolom
                 if len(cols) < 8:
                     errors.append(f"Baris {i}: Kurang kolom (hanya {len(cols)})")
                     continue
                 
                 try:
-                    # Parse tempat/tanggal lahir (format: "JOTO KECIL, 22-05-2974")
                     tempat_tgl = cols[4].strip()
                     if ',' in tempat_tgl:
                         parts = tempat_tgl.split(',', 1)
@@ -484,24 +445,20 @@ class ImportDialog(ctk.CTkToplevel):
                         tempat_lahir = tempat_tgl
                         tgl_lahir = ""
                     
-                    # Format tanggal lahir
                     tgl_lahir_formatted = format_tanggal(tgl_lahir)
                     if not tgl_lahir_formatted:
                         errors.append(f"Baris {i}: Format tanggal lahir tidak valid ({tgl_lahir})")
                         continue
                     
-                    # Parse alamat lengkap (kolom 5)
-                    # Format: JL. PIPA AIR BERSIH..., KEL. SIMPANG PADANG, KEC. BATHIN SOLAPAN, KAB.BENGKALIS, RIAU
                     alamat_full = cols[5].strip()
                     parsed_address = self.parse_alamat_lengkap(alamat_full)
                     
-                    # Create PesertaModel
                     peserta = PesertaModel(
                         id_peserta=f"PSRT-{uuid.uuid4().hex[:8].upper()}",
-                        id_sertifikasi="",  # Will be filled when saving
-                        skema=cols[2].strip(),              # Kompetensi/Skema
-                        nama=cols[1].strip(),               # Nama
-                        nik=cols[3].strip(),                # No. KTP
+                        id_sertifikasi="", 
+                        skema=cols[2].strip(),        
+                        nama=cols[1].strip(),        
+                        nik=cols[3].strip(),          
                         tempat_lahir=tempat_lahir,
                         tanggal_lahir=tgl_lahir_formatted,
                         alamat=parsed_address['alamat'],
@@ -509,12 +466,11 @@ class ImportDialog(ctk.CTkToplevel):
                         kecamatan=parsed_address['kecamatan'],
                         kabupaten=parsed_address['kabupaten'],
                         provinsi=parsed_address['provinsi'],
-                        telepon=cols[6].replace("-", "").strip(),  # No. Telp
-                        pendidikan=cols[7].strip(),         # Pendidikan Terakhir
-                        instansi=""                          # Tidak ada di format ini
+                        telepon=cols[6].replace("-", "").strip(), 
+                        pendidikan=cols[7].strip(),        
+                        instansi=""                        
                     )
                     
-                    # Store dengan info sertifikasi (akan diisi dari combo box)
                     self.parsed_data.append({
                         'peserta': peserta
                     })
@@ -522,7 +478,6 @@ class ImportDialog(ctk.CTkToplevel):
                 except Exception as e:
                     errors.append(f"Baris {i}: Error parsing - {str(e)}")
             
-            # Show results
             if errors:
                 error_msg = "\n".join(errors[:5])
                 if len(errors) > 5:
@@ -551,12 +506,6 @@ class ImportDialog(ctk.CTkToplevel):
             messagebox.showerror("Error", f"Gagal parsing data:\n{str(e)}")
 
     def parse_alamat_lengkap(self, alamat_full: str):
-        """
-        Parse alamat lengkap format AWL Report:
-        JL. PIPA AIR BERSIH..., KEL. SIMPANG PADANG, KEC. BATHIN SOLAPAN, KAB.BENGKALIS, RIAU
-        
-        Returns dict dengan keys: alamat, kelurahan, kecamatan, kabupaten, provinsi
-        """
         try:
             parts = [p.strip() for p in alamat_full.split(',')]
             
@@ -572,32 +521,38 @@ class ImportDialog(ctk.CTkToplevel):
                 part_upper = part.upper()
                 
                 if 'KEL.' in part_upper or 'KELURAHAN' in part_upper:
-                    # Extract kelurahan
                     if 'KEL.' in part_upper:
                         result['kelurahan'] = part.split('KEL.')[-1].strip()
                     else:
                         result['kelurahan'] = part.split('KELURAHAN')[-1].strip()
                         
                 elif 'KEC.' in part_upper or 'KECAMATAN' in part_upper:
-                    # Extract kecamatan
                     if 'KEC.' in part_upper:
                         result['kecamatan'] = part.split('KEC.')[-1].strip()
                     else:
                         result['kecamatan'] = part.split('KECAMATAN')[-1].strip()
                         
                 elif 'KAB.' in part_upper or 'KABUPATEN' in part_upper or 'KOTA' in part_upper:
-                    # Extract kabupaten
                     kab = part.replace('KAB.', '').replace('KABUPATEN', '').replace('KOTA', '').strip()
                     result['kabupaten'] = kab
                     
                 elif not result['alamat']:
-                    # First part is the street address
                     result['alamat'] = part
                 else:
-                    # Last part is usually province (jika belum ada kabupaten, ini kabupaten)
                     if not result['kabupaten'] and not result['provinsi']:
-                        # Cek apakah ini nama provinsi atau kabupaten
-                        provinsi_keywords = ['RIAU', 'SUMATRA', 'JAWA', 'KALIMANTAN', 'SULAWESI', 'BALI', 'NUSA', 'MALUKU', 'PAPUA']
+                        provinsi_keywords = [
+                            'Aceh', 'Sumatra Utara', 'Sumatra Barat', 
+                            'Riau', 'Kepulauan Riau', 'Jambi', 'Sumatra Selatan', 
+                            'Kepulauan Bangka Belitung', 'Bengkulu', 'Lampung', 
+                            'DKI Jakarta', 'Jawa Barat', 'Banten', 'Jawa Tengah', 
+                            'DI Yogyakarta', 'Jawa Timur', 'Bali', 'Nusa Tenggara Barat', 
+                            'Nusa Tenggara Timur', 'Kalimantan Barat', 'Kalimantan Tengah', 
+                            'Kalimantan Selatan', 'Kalimantan Timur', 'Kalimantan Utara', 
+                            'Sulawesi Utara', 'Gorontalo', 'Sulawesi Tengah', 'Sulawesi Barat', 
+                            'Sulawesi Selatan', 'Sulawesi Tenggara', 'Maluku', 'Maluku Utara', 
+                            'Papua', 'Papua Barat', 'Papua Tengah', 'Papua Pegunungan', 'Papua Selatan', 
+                            'Papua Barat Daya']
+                        
                         if any(kw in part_upper for kw in provinsi_keywords):
                             result['provinsi'] = part
                         else:
@@ -617,12 +572,6 @@ class ImportDialog(ctk.CTkToplevel):
             }
             
     def parse_alamat(self, alamat_full: str):
-        """
-        Parse alamat format:
-        JL. PIPA AIR BERSIH..., KEL. SIMPANG PADANG, KEC. BATHIN SOLAPAN
-        
-        Returns dict dengan keys: alamat, kelurahan, kecamatan
-        """
         try:
             parts = [p.strip() for p in alamat_full.split(',')]
             
@@ -652,12 +601,10 @@ class ImportDialog(ctk.CTkToplevel):
             }
 
     def save_to_database(self):
-        """Simpan semua data ke database"""
         if not self.parsed_data:
             messagebox.showwarning("Peringatan", "Tidak ada data untuk disimpan!")
             return
         
-        # Update selected ID dari combo box
         self._update_selected_id()
         
         if not self.id_sertifikasi:
@@ -667,14 +614,10 @@ class ImportDialog(ctk.CTkToplevel):
         try:
             total_saved = 0
             
-            # Update id_sertifikasi untuk semua peserta
             for item in self.parsed_data:
                 item['peserta'].id_sertifikasi = self.id_sertifikasi
             
-            # Ambil list peserta saja
             peserta_list = [item['peserta'] for item in self.parsed_data]
-            
-            # Batch save peserta
             saved = DB_Save_Peserta_Batch(peserta_list, self.id_sertifikasi)
             total_saved += saved
             
@@ -684,7 +627,6 @@ class ImportDialog(ctk.CTkToplevel):
                 f"👥 {total_saved} Peserta ke sertifikasi terpilih"
             )
             
-            # Callback and close
             if self.callback:
                 self.callback()
             

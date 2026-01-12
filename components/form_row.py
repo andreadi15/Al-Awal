@@ -3,7 +3,7 @@ import customtkinter as ctk
 
 class FormRow:
     def __init__(self, parent, row, label_text, widget):
-        # Label kiri
+       
         label = ctk.CTkLabel(
             parent,
             text=label_text,
@@ -17,11 +17,10 @@ class FormRow:
             row=row,
             column=0,
             sticky="w",
-            pady=(8, 0),     # sedikit jarak atas
+            pady=(8, 0),     
             padx=(0, 20)
         )
 
-        # Input kanan
         widget.grid(
             row=row,
             column=1,
@@ -29,16 +28,13 @@ class FormRow:
             pady=(8, 0)
         )
 
-        # Label error (kalau ada dari create_entry)
         if hasattr(widget, "error_label"):
-            # di bawah input, kolom yang sama
             widget.error_label.grid(
                 row=row + 1,
                 column=1,
                 sticky="w",
-                pady=(0, 8)   # jarak ke field berikutnya
+                pady=(0, 8)   
             )
-            # teks awal kosong, jadi visualnya cuma jarak aja
 
         parent.grid_columnconfigure(1, weight=1)
         self.widget = widget

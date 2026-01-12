@@ -9,11 +9,7 @@ from datetime import datetime
 # ============================================
 
 class AddSertifikasiDialog(ctk.CTkToplevel):
-    """
-    Custom dialog untuk menambah sertifikasi baru
-    Matching dengan design main aplikasi
-    Responsive dan auto-center di layar user
-    """
+    
     def __init__(self, parent, callback, sertif=None):
         super().__init__(parent)
     
@@ -163,7 +159,7 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
         # Focus to first field
         self.sertifikasi_entry.focus()
     
-    def format_tanggal_input(self, event):  # atau format_tanggal_lahir
+    def format_tanggal_input(self, event):
         """Handler untuk input tanggal dengan format DD-MM-YYYY"""
         entry = event.widget
         current_text = entry.get()
@@ -395,65 +391,3 @@ class AddSertifikasiDialog(ctk.CTkToplevel):
             command=error_dialog.destroy
         ).pack(pady=10)
     
-    # def show_success(self, message):
-    #     """Show success message with auto-center"""
-    #     success_dialog = ctk.CTkToplevel(self)
-    #     success_dialog.title("Sukses")
-        
-    #     # Set size
-    #     dialog_width = 400
-    #     dialog_height = 240
-    #     success_dialog.geometry(f"{dialog_width}x{dialog_height}")
-    #     success_dialog.resizable(False, False)
-    #     success_dialog.configure(fg_color="#2a2a2a")
-        
-    #     # CRITICAL: Update untuk mendapatkan ukuran screen
-    #     success_dialog.update_idletasks()
-        
-    #     # Center relative to screen
-    #     screen_width = success_dialog.winfo_screenwidth()
-    #     screen_height = success_dialog.winfo_screenheight()
-        
-    #     x = (screen_width - dialog_width) // 2
-    #     y = (screen_height - dialog_height) // 2
-        
-    #     success_dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
-        
-    #     success_dialog.transient(self)
-    #     success_dialog.grab_set()
-        
-    #     # Header
-    #     header = ctk.CTkFrame(success_dialog, fg_color="#4caf50", height=60)
-    #     header.pack(fill="x")
-    #     header.pack_propagate(False)
-        
-    #     ctk.CTkLabel(
-    #         header,
-    #         text="✓ Sukses",
-    #         font=("Arial", 18, "bold"),
-    #         text_color="white"
-    #     ).pack(pady=15)
-        
-    #     # Message
-    #     ctk.CTkLabel(
-    #         success_dialog,
-    #         text=message,
-    #         font=("Arial", 13),
-    #         wraplength=350,
-    #         justify="center"
-    #     ).pack(pady=20)
-        
-    #     # OK button
-    #     ctk.CTkButton(
-    #         success_dialog,
-    #         text="OK",
-    #         width=120,
-    #         height=40,
-    #         font=("Arial", 14, "bold"),
-    #         fg_color="#4caf50",
-    #         hover_color="#45a049",
-    #         corner_radius=10,
-    #         command=success_dialog.destroy
-    #     ).pack(pady=10)
-        
-        

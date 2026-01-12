@@ -4,10 +4,9 @@ from components.nik_entry import NikEntry
 
 class createEntry:
     def __init__(self, parent, input_type, **kwargs):
-        self.DEFAULT_BORDER_COLOR = "#1a73e8"   # warna border normal / fokus
+        self.DEFAULT_BORDER_COLOR = "#1a73e8"  
         self.ERROR_BORDER_COLOR   = "#ff4d4f" 
-        """Helper untuk membuat baris form"""
-        # Input widget
+       
         if input_type == "entry":
             self.widget = ctk.CTkEntry(
                 parent,
@@ -66,11 +65,10 @@ class createEntry:
             anchor="w",
         )
 
-        # tempel ke widget biar bisa diakses di luar
         self.widget.error_label = self.error_label
 
         # ======================
-        # HELPER ERROR API
+        # HANDLE ERROR API
         # ======================
         def set_error(message: str):
             """Kasih error ke field ini: border merah + teks di bawah input."""
@@ -92,12 +90,10 @@ class createEntry:
         self.widget.clear_error = clear_error
 
         # ======================
-        # FOCUS EVENT
+        # FOCUS EVENT HANDLER
         # ======================
         def on_focus_in(event):
-            # saat user mau benerin input: balikin border ke biru & hapus pesan error
             self.widget.clear_error()
 
-        # kalau mau, bisa tambahin FocusOut untuk behaviour lain
         self.widget.bind("<FocusIn>", on_focus_in)
 

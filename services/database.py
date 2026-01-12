@@ -1,7 +1,7 @@
 import sqlite3
 from config import DB_PATH, DEBUG
 from datetime import datetime
-from pages.peserta_model import PesertaModel
+from models.peserta_model import PesertaModel
 from services.logic import format_tanggal,return_format_tanggal
 
 # ====== [DB] Connection Handler ======== 

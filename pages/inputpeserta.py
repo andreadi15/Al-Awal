@@ -1,9 +1,9 @@
 import customtkinter as ctk
 from tkinter import messagebox
 import re, uuid
-from pages.peserta_model import PesertaModel
+from models.peserta_model import PesertaModel
 from services.database import DB_Save_Peserta,DB_Get_All_Sertifikasi,DB_Get_Peserta_By_Id,DB_Get_Peserta_By_Sertifikasi
-from components import peserta_validator,create_entry,form_row,nik_entry,peserta_list_panel
+from components import peserta_validator,create_entry,form_row,nik_entry
 from config import SERTIFIKASI_OPTIONS,SKEMA_OPTIONS,PENDIDIKAN_OPTIONS
 
 class InputPesertaPage(ctk.CTkFrame):
@@ -14,16 +14,13 @@ class InputPesertaPage(ctk.CTkFrame):
         self.sertifikasi_map = {}
         self.entries = {}
         self.error_labels = {}
-        # List untuk menyimpan semua peserta
         self.list_peserta = []
         
-        # Set ID sertifikasi
         if id_sertifikasi:
             self.selected_id_sertifikasi = id_sertifikasi
         else:
             self.selected_id_sertifikasi = ""
 
-        # Index peserta saat ini (0-based)
         self.current_index = 0  
         
         self.DEFAULT_BORDER_COLOR = "#1a73e8"
@@ -36,21 +33,16 @@ class InputPesertaPage(ctk.CTkFrame):
         
         
         if self.selected_id_sertifikasi:
-            # Sudah ada ID dari parameter (dipanggil dari tabel peserta)
             self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
         else:
-            # Tidak ada ID, ambil dari combo box (default pertama)
             self._update_selected_id()
         
-        # Load peserta dari sertifikasi yang dipilih
         if self.selected_id_sertifikasi:
             self.load_peserta_from_sertifikasi()
         
-        # Refresh UI terakhir
         self.refresh_UI_Form()
     
     def _build_layout(self):
-        # Container utama
         self.main_container = ctk.CTkScrollableFrame(
             self, 
             fg_color="#2a2a2a",
@@ -60,8 +52,6 @@ class InputPesertaPage(ctk.CTkFrame):
         self.main_container.bind_all("<MouseWheel>", self._on_mousewheel)
         self.main_container.bind("<Button-1>", lambda e: self.main_container.focus_set())
 
-        
-        # Header
         self.header_label = ctk.CTkLabel(
             self.main_container,
             text="📝 INPUT DATA PESERTA",
@@ -79,10 +69,8 @@ class InputPesertaPage(ctk.CTkFrame):
         self.form_container.bind("<Button-1>", lambda e: self.form_container.focus_set())
 
     def _build_container_data(self):
-        # Container untuk data peserta yang sudah diinput (initially hidden)
         self.data_container_wrapper = ctk.CTkFrame(self.main_container, fg_color="transparent")
         
-        # Header data container dengan delete all button
         self.data_header = ctk.CTkFrame(self.data_container_wrapper, fg_color="transparent")
         self.data_header.pack(fill="x", pady=(0, 5))
         
@@ -107,7 +95,6 @@ class InputPesertaPage(ctk.CTkFrame):
         )
         delete_all_btn.pack(side="right")
         
-        # Scrollable frame untuk button data peserta
         self.data_scroll_frame = ctk.CTkScrollableFrame(
             self.data_container_wrapper,
             fg_color="#333333",
@@ -117,7 +104,6 @@ class InputPesertaPage(ctk.CTkFrame):
         )
         self.data_scroll_frame.pack(fill="x", pady=(0, 15))
         
-        # Configure grid untuk data buttons
         for i in range(10):  # 10 kolom
             self.data_scroll_frame.grid_columnconfigure(i, weight=1, minsize=100)
             
@@ -266,7 +252,6 @@ class InputPesertaPage(ctk.CTkFrame):
         for w in self.entries.values():
             w.bind("<FocusIn>", lambda e, widget=w: self.scroll_to_widget(widget))
         
-        # Reset button (di bawah pendidikan terakhir)
         reset_frame = ctk.CTkFrame(form_content, fg_color="transparent")
         reset_frame.grid(row=current_row, column=0, columnspan=2, sticky="e", pady=(10, 20))
         
@@ -282,7 +267,6 @@ class InputPesertaPage(ctk.CTkFrame):
         
         current_row += 1
         
-        # Button Container dengan grid layout
         button_frame = ctk.CTkFrame(form_content, fg_color="transparent")
         button_frame.grid(row=current_row, column=0, columnspan=2, sticky="ew", pady=(10, 10))
         
@@ -298,7 +282,6 @@ class InputPesertaPage(ctk.CTkFrame):
         )
         self.prev_btn.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         
-        # Tombol Save (di tengah, col 1)
         self.save_btn = ctk.CTkButton(
             button_frame,
             text="💾 Save",
@@ -311,7 +294,6 @@ class InputPesertaPage(ctk.CTkFrame):
         )
         self.save_btn.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
         
-        # Tombol Next (di kanan, col 2)
         self.next_btn = ctk.CTkButton(
             button_frame,
             text="Next ➡️",
@@ -325,7 +307,6 @@ class InputPesertaPage(ctk.CTkFrame):
         self.next_btn.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
         
         
-        # Configure grid untuk responsive buttons (3 kolom)
         for i in range(3):
             button_frame.grid_columnconfigure(i, weight=1, uniform="buttons")
 
@@ -344,17 +325,12 @@ class InputPesertaPage(ctk.CTkFrame):
         self.sertifikasi = DB_Get_All_Sertifikasi()
         
     def load_peserta_from_sertifikasi(self):
-        """Load semua peserta dari sertifikasi yang dipilih"""
         if not self.selected_id_sertifikasi:
             return
         
         try:
-            # Import function dari database
-            from services.database import DB_Get_Peserta_By_Sertifikasi
-            
             self.list_peserta = DB_Get_Peserta_By_Sertifikasi(self.selected_id_sertifikasi)
             
-            # Set current index
             if len(self.list_peserta) > 0:
                 self.current_index = 0
                 self.load_form(self.list_peserta[0])
@@ -370,31 +346,22 @@ class InputPesertaPage(ctk.CTkFrame):
             self.current_index = 0
             
     def _compare_data_changes(self):
-        """
-        Membandingkan data saat ini dengan data asli dari database
-        Returns: dict dengan info perubahan
-        """
-        # Get data asli dari database (sudah dalam bentuk PesertaModel)
         original_list = DB_Get_Peserta_By_Sertifikasi(self.selected_id_sertifikasi)
         
-        # Convert ke dict untuk mudah compare (key: id_peserta)
         original_dict = {p.id_peserta: p for p in original_list}
         current_dict = {p.id_peserta: p for p in self.list_peserta}
         
         changes = {
-            'modified': [],      # Data yang diubah
-            'added': [],         # Data baru ditambahkan
-            'deleted': [],       # Data yang dihapus
+            'modified': [],      
+            'added': [],         
+            'deleted': [],       
             'has_changes': False
         }
         
-        # Cek data yang diubah atau ditambah
         for id_peserta, current_peserta in current_dict.items():
             if id_peserta in original_dict:
-                # Data sudah ada, cek apakah berubah
                 original = original_dict[id_peserta]
                 
-                # Bandingkan field-field penting
                 if (original.nama != current_peserta.nama or
                     original.nik != current_peserta.nik or
                     original.skema != current_peserta.skema or
@@ -412,11 +379,9 @@ class InputPesertaPage(ctk.CTkFrame):
                     changes['modified'].append(current_peserta.nama)
                     changes['has_changes'] = True
             else:
-                # Data baru
                 changes['added'].append(current_peserta.nama)
                 changes['has_changes'] = True
                 
-        # Cek data yang dihapus
         for id_peserta, original in original_dict.items():
             if id_peserta not in current_dict:
                 changes['deleted'].append(original.nama)
@@ -425,15 +390,11 @@ class InputPesertaPage(ctk.CTkFrame):
         return changes
 
     def _show_changes_dialog(self, changes):
-        """
-        Tampilkan dialog konfirmasi dengan detail perubahan
-        Returns: True jika user klik Ya, False jika Tidak
-        """
         message_parts = []
         
         if changes['modified']:
             message_parts.append(f"✏️ DATA DIUBAH ({len(changes['modified'])}):")
-            for nama in changes['modified'][:5]:  # Tampilkan max 5
+            for nama in changes['modified'][:5]:  
                 message_parts.append(f"  • {nama}")
             if len(changes['modified']) > 5:
                 message_parts.append(f"  • ... dan {len(changes['modified']) - 5} lainnya")
@@ -486,19 +447,14 @@ class InputPesertaPage(ctk.CTkFrame):
         return options
     
     def _on_sertifikasi_change(self, choice):
-        """Callback saat combo box sertifikasi berubah"""
-        # Cek apakah ada data peserta
         if len(self.list_peserta) > 0:
             try:
-                # Validasi form terakhir dulu
                 peserta = self.collect_form()
                 errors = peserta_validator.PesertaValidator.validate(peserta)
                 
                 if errors:
-                    # Ada error, kembalikan ke sertifikasi sebelumnya
                     self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
                     
-                    # Tampilkan error
                     for key, message in errors.items():
                         self.entries[key].set_error(message)
                     first_key = next(iter(errors))
@@ -510,55 +466,40 @@ class InputPesertaPage(ctk.CTkFrame):
                         "Harap lengkapi data peserta sebelum berganti sertifikasi!"
                     )
                     return
-                # Update peserta terakhir di list
                 if self.current_index < len(self.list_peserta):
                     self.list_peserta[self.current_index] = peserta
                 else:
                     self.list_peserta.append(peserta)
                 
-                # 🔥 PERBANDINGAN DATA
                 changes = self._compare_data_changes()
                 
                 if changes['has_changes']:
-                    # Ada perubahan, tampilkan dialog dengan detail
                     if not self._show_changes_dialog(changes):
-                        # User cancel, kembalikan combo box
                         self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
                         return
                     
-                    # User setuju, simpan semua data
                     self.simpan_peserta(self.list_peserta)
                     
                     messagebox.showinfo(
                         "Sukses",
                         f"Berhasil menyimpan perubahan!"
                     )
-                # else:
-                #     # Tidak ada perubahan, langsung lanjut tanpa pop-up
-                #     pass
                 
             except Exception as e:
                 print(f"Gagal memproses data: {str(e)}")
                 self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
                 return
         
-        # Update selected ID
         self._update_selected_id()
-        
-        # Load peserta dari sertifikasi baru
         self.load_peserta_from_sertifikasi()
-        
-        # Refresh UI
         self.refresh_UI_Form()
     
     def _update_selected_id(self):
-        """Update selected_id_sertifikasi berdasarkan combo box"""
         current_text = self.entries["sertifikasi"].get()
         self.selected_id_sertifikasi = self.sertifikasi_map.get(current_text, "")
         print(f"[DEBUG] Selected ID: {self.selected_id_sertifikasi}")
         
-    def format_tanggal_input(self, event):  # atau format_tanggal_lahir
-        """Handler untuk input tanggal dengan format DD-MM-YYYY"""
+    def format_tanggal_input(self, event):  
         entry = event.widget
         current_text = entry.get()
         
@@ -566,123 +507,80 @@ class InputPesertaPage(ctk.CTkFrame):
         if event.keysym in navigation_keys:
             return
 
-        # 🔥 SIMPAN posisi cursor SEBELUM modifikasi
         cursor_pos = entry.index("insert")
         
-        # Ambil hanya digit dari text saat ini
         current_digits = re.sub(r'\D', '', current_text)
         
-        # Handle Backspace
         if event.keysym == "BackSpace":
             if cursor_pos > 0:
-                # Hitung posisi digit yang akan dihapus
-                # Hitung berapa separator sebelum cursor
                 separators_before = current_text[:cursor_pos].count('-')
-                # Posisi digit = cursor - jumlah separator
                 digit_pos = cursor_pos - separators_before - 1
                 
                 if digit_pos >= 0 and digit_pos < len(current_digits):
-                    # Hapus digit di posisi yang benar
                     current_digits = current_digits[:digit_pos] + current_digits[digit_pos + 1:]
             else:
                 return "break"
                 
-        # Handle input digit
         elif event.char.isdigit():
             if len(current_digits) >= 8:
                 return "break"
             
-            # 🔥 FIX: Hitung posisi digit untuk insert dengan benar
-            # Hitung separator SEBELUM cursor (tidak termasuk posisi cursor)
             separators_before = current_text[:cursor_pos].count('-')
-            # Posisi digit murni (tanpa separator)
             digit_pos = cursor_pos - separators_before
             
-            # 🔥 FIX: Insert digit di posisi cursor yang tepat
-            # Gunakan digit_pos langsung tanpa adjustment
             current_digits = current_digits[:digit_pos] + event.char + current_digits[digit_pos:]
             
         else:
-            # Block karakter selain digit atau backspace
             return "break"
         
-        # Format dengan strip: DD-MM-YYYY
         formatted = ""
         for i, digit in enumerate(current_digits):
             if i == 2 or i == 4:
                 formatted += "-"
             formatted += digit
         
-        # Update entry
         entry.delete(0, "end")
         entry.insert(0, formatted)
         
-        # 🔥 RESTORE posisi cursor dengan adjustment
         if event.keysym == "BackSpace":
-            # Setelah backspace, cursor mundur 1 posisi
             new_cursor_pos = max(0, cursor_pos - 1)
-            # Skip separator jika cursor di atasnya
             if new_cursor_pos > 0 and new_cursor_pos < len(formatted) and formatted[new_cursor_pos] == '-':
                 new_cursor_pos -= 1
         else:
-            # 🔥 FIX: Setelah insert digit, hitung posisi baru dengan benar
-            # digit_pos sudah menunjukkan posisi sebelum insert
-            # Setelah insert, digit baru ada di digit_pos
-            # Cursor harus di digit_pos + 1 (dalam sistem digit murni)
             new_digit_pos = digit_pos + 1
             
-            # Konversi kembali ke posisi formatted (dengan separator)
-            # Tambahkan separator yang ada sebelum posisi ini
             if new_digit_pos > 4:
-                new_cursor_pos = new_digit_pos + 2  # 2 separator: setelah DD dan MM
+                new_cursor_pos = new_digit_pos + 2  
             elif new_digit_pos > 2:
-                new_cursor_pos = new_digit_pos + 1  # 1 separator: setelah DD
+                new_cursor_pos = new_digit_pos + 1  
             else:
-                new_cursor_pos = new_digit_pos  # belum ada separator
+                new_cursor_pos = new_digit_pos  
         
-        # Set cursor position
         entry.icursor(min(new_cursor_pos, len(formatted)))
-        
         return "break"
     
     def format_no_telepon(self, event):
-        """Handler untuk input telepon - hanya angka"""
-        entry = event.widget
-        current_text = entry.get()
-        
-        # Handle Backspace
         if event.keysym == "BackSpace":
-            return  # Allow backspace
-        # Hanya izinkan digit
+            return  
         elif event.char.isdigit():
-            return  # Allow digit
+            return 
         else:
-            # Block karakter selain digit
             return "break"
         
     def _on_mousewheel(self, event):
-        # scroll lebih cepat  (angka 2 bisa jadi 3, 4, 5 sesuai rasa)
         self.main_container._parent_canvas.yview_scroll(
-            int(-1 * (event.delta/120) * 50),  # scroll multiplier 3x
+            int(-1 * (event.delta/120) * 50), 
             "units")
         
     def scroll_to_widget(self, widget):
-        """Scroll otomatis ke widget saat mendapat focus"""
         try:
-            # Pastikan semua widget sudah terupdate
             widget.update_idletasks()
             self.main_container.update_idletasks()
-            
-            # Dapatkan canvas dari scrollable frame
+
             canvas = self.main_container._parent_canvas
-            
-            # Dapatkan posisi widget relatif terhadap form_frame
             widget_y = widget.winfo_rooty() - self.form_frame.winfo_rooty()
-            
-            # Dapatkan tinggi viewport (area yang terlihat)
             canvas_height = canvas.winfo_height()
             
-            # Dapatkan total tinggi konten
             canvas.update_idletasks()
             bbox = canvas.bbox("all")
             if not bbox:
@@ -690,24 +588,15 @@ class InputPesertaPage(ctk.CTkFrame):
             content_height = bbox[3] - bbox[1]
             
             if content_height <= canvas_height:
-                # Konten muat semua, tidak perlu scroll
                 return
             
-            # Hitung posisi scroll yang ideal
-            # Taruh widget di tengah viewport dengan offset 100px dari atas
             target_y = widget_y - 100
             
-            # Normalisasi ke range 0.0 - 1.0
             scroll_position = target_y / content_height
-            
-            # Batasi antara 0.0 dan 1.0
-            scroll_position = max(0.0, min(1.0, scroll_position))
-            
-            # Terapkan scroll
+            scroll_position = max(0.0, min(1.0, scroll_position))    
             canvas.yview_moveto(scroll_position)
             
         except Exception as e:
-            # Abaikan error untuk menghindari crash
             print(f"Scroll error: {e}")
             pass
 
@@ -717,7 +606,6 @@ class InputPesertaPage(ctk.CTkFrame):
             if not DB_Get_Peserta_By_Id(id_peserta):
                 break
             
-        """Ambil data dari form saat ini"""        
         return PesertaModel(
             id_peserta=id_peserta,
             id_sertifikasi=self.selected_id_sertifikasi,
@@ -737,8 +625,6 @@ class InputPesertaPage(ctk.CTkFrame):
         )
  
     def load_form(self, peserta: PesertaModel):
-        """Load data peserta ke form"""
-        # self.entries["sertifikasi"].set(peserta.sertifikasi)
         self.entries["skema"].set(peserta.skema)
         
         self.entries["nama"].delete(0, "end")
@@ -778,10 +664,8 @@ class InputPesertaPage(ctk.CTkFrame):
         self.entries["instansi"].insert(0, peserta.instansi)
     
     def next_peserta(self):
-        """Pindah ke peserta selanjutnya"""
         if len(self.sertifikasi) <= 0:
             return
-        # Validasi form saat ini
         peserta = self.collect_form()
         errors = peserta_validator.PesertaValidator.validate(peserta)
         if errors:
@@ -792,27 +676,21 @@ class InputPesertaPage(ctk.CTkFrame):
             self.form_frame.focus_set()
             return
             
-        
-        # Update atau tambah ke list
         if self.current_index < len(self.list_peserta):
             self.list_peserta[self.current_index] = peserta
         else:
             self.list_peserta.append(peserta)
         
-        # Show data container jika belum terlihat
         if len(self.list_peserta) > 0 and not self.data_container_wrapper.winfo_ismapped():
             self.data_container_wrapper.pack(fill="x", padx=50, pady=(0, 15), after=self.header_label)
         
-        # Pindah ke index selanjutnya
         self.current_index += 1
         
-        # Load data peserta berikutnya jika ada, atau reset form
         if self.current_index < len(self.list_peserta):
             self.load_form(self.list_peserta[self.current_index])
         else:
             self.clear_form()
                     
-        # Update UI
         self.refresh_UI_Form()
     
     def _cek_form_filled(self):
@@ -830,9 +708,7 @@ class InputPesertaPage(ctk.CTkFrame):
             )
    
     def previous_peserta(self):
-        """Kembali ke peserta sebelumnya"""
         if self.current_index > 0:
-            # Simpan data saat ini jika ada isinya
             if self._cek_form_filled():
                 peserta = self.collect_form()
                 if self.current_index < len(self.list_peserta):
@@ -840,13 +716,8 @@ class InputPesertaPage(ctk.CTkFrame):
                 else:
                     self.list_peserta.append(peserta)
             
-            # Pindah ke index sebelumnya
             self.current_index -= 1
-            
-            # Load data peserta sebelumnya
             self.load_form(self.list_peserta[self.current_index])
-            
-            # Update UI
             self.refresh_UI_Form()
        
     def clear_form(self):
@@ -885,40 +756,25 @@ class InputPesertaPage(ctk.CTkFrame):
                     pass
          
     def refresh_UI_Form(self):
-        """Update label counter peserta"""
         self.counter_label.configure(text=f"Peserta #{self.current_index + 1}")
         
-        """Update state tombol navigasi"""
-        # Tombol prev hanya aktif jika bukan peserta pertama
         if self.current_index > 0:
             self.prev_btn.configure(state="normal")
         else:
             self.prev_btn.configure(state="disabled")
             
-        """Update state reset button"""
-        # 🔥 Reset hanya aktif di NEW INPUT (index >= jumlah peserta tersimpan)
         if self.current_index >= len(self.list_peserta):
-            # NEW INPUT - Enable reset
             self.reset_link.configure(
                 text_color="#ff051e",
                 cursor="hand2"
             )
             self.reset_link.bind("<Button-1>", lambda e: self.clear_form())
         else:
-            # OLD DATA - Disable reset
             self.reset_link.configure(
-                text_color="#666666",  # Abu-abu
-                cursor="arrow"  # Cursor normal
+                text_color="#666666", 
+                cursor="arrow"  
             )
             self.reset_link.unbind("<Button-1>")
-            
-        # """Update state sertifikasi combo box"""
-        # if len(self.list_peserta) >= 1:
-        #     # Disable combo box, jadikan readonly
-        #     self.entries["sertifikasi"].configure(state="disabled")
-        # else:
-        #     # Enable combo box
-        #     self.entries["sertifikasi"].configure(state="readonly")
             
         if len(self.list_peserta) >= 1:
             if not self.data_container_wrapper.winfo_ismapped():
@@ -927,22 +783,17 @@ class InputPesertaPage(ctk.CTkFrame):
             if self.data_container_wrapper.winfo_ismapped():
                 self.data_container_wrapper.pack_forget()
     
-        """Update button data peserta di container"""
-        # Hapus semua button lama
         for widget in self.data_scroll_frame.winfo_children():
             widget.destroy()
         
-        # Buat button untuk setiap peserta
         row = 0
         col = 0
         for idx, peserta in enumerate(self.list_peserta):
-            # Container untuk button + delete
             btn_container = ctk.CTkFrame(self.data_scroll_frame, fg_color="transparent")
             btn_container.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
             
             is_current = (idx == self.current_index)
 
-            # Button data peserta
             btn = ctk.CTkButton(
                 btn_container,
                 text=f"#{idx + 1}",
@@ -956,7 +807,6 @@ class InputPesertaPage(ctk.CTkFrame):
             )
             btn.pack(side="left", expand=True, fill="x")
             
-            # Delete button
             del_btn = ctk.CTkButton(
                 btn_container,
                 text="✕",
@@ -970,7 +820,6 @@ class InputPesertaPage(ctk.CTkFrame):
             )
             del_btn.pack(side="right", padx=(5, 0))
             
-            # Update grid position
             col += 1
             if col >= 10:
                 col = 0

@@ -5,8 +5,8 @@ import customtkinter as ctk
 from tkinter import messagebox
 import os
 from datetime import datetime, timedelta
-from pages.peserta_model import PesertaModel
-from pages.tambah_sertifikasi import AddSertifikasiDialog
+from models.peserta_model import PesertaModel
+from components.tambah_sertifikasi import AddSertifikasiDialog
 from services.logic import return_format_tanggal,format_telepon,format_tempat_tanggal,format_alamat
 from services.database import (
     DB_Get_All_Sertifikasi,
@@ -797,7 +797,7 @@ class PesertaPage(ctk.CTkFrame):
          
     def show_import_dialog(self,id_sertifikasi):
         """Show import dialog"""
-        from pages.import_dialog import ImportDialog
+        from components.import_dialog import ImportDialog
         ImportDialog(self, self.refresh_all, id_sertifikasi)    
         
     def show_menu_dropdown(self, id_sertifikasi, tanggal_pelatihan, button):
@@ -864,7 +864,7 @@ class PesertaPage(ctk.CTkFrame):
 
     def show_export_dialog(self, id_sertifikasi, tanggal_pelatihan):
         """Show export dialog"""
-        from pages.export_dialog import ExportDialog
+        from components.export_dialog import ExportDialog
         from services.database import DB_Get_Peserta_By_Sertifikasi
         
         # Load peserta
