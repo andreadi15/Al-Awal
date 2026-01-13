@@ -216,52 +216,138 @@ class PesertaPage(ctk.CTkFrame):
         self.refresh_display()
    
     def refresh_display(self):
+        """Refresh display dengan data sertifikasi"""
+        # Clear existing
         for widget in self.scroll_container.winfo_children():
             widget.destroy()
         
-        if not self.filtered_sertifikasi and self.date_filter == "Semua":
-            display_data = self.all_sertifikasi
+        # Determine display data - PERBAIKAN DI SINI
+        if self.search_text:
+            # Ada search active, pakai filtered results
+            display_data = self.filtered_sertifikasi if self.filtered_sertifikasi is not None else []
+        elif self.date_filter != "Semua":
+            # Ada date filter, pakai filtered results
+            display_data = self.filtered_sertifikasi if self.filtered_sertifikasi else []
         else:
-            display_data = self.filtered_sertifikasi if self.filtered_sertifikasi else self.all_sertifikasi
+            # Default: tampilkan semua
+            display_data = self.all_sertifikasi
         
+        # Update info
         total_sertifikasi = len(display_data)
         total_peserta = sum(s['jumlah_peserta'] for s in display_data)
         
-        if self.date_filter != "Semua":
+        # Update info label based on state
+        if self.search_text and display_data:
+            # Search found results
             self.info_label.configure(
-                text=f"📊 {total_sertifikasi} Sertifikasi | {total_peserta} Total Peserta | 📅 Filter: {self.date_filter}"
+                text=f"🔍 {total_sertifikasi} Sertifikasi | {total_peserta} Peserta | '{self.search_text}'"
             )
+        elif self.date_filter != "Semua" and display_data:
+            # Date filter with results
+            self.info_label.configure(
+                text=f"📊 {total_sertifikasi} Sertifikasi | {total_peserta} Peserta | 📅 {self.date_filter}"
+            )
+        elif not display_data and (self.search_text or self.date_filter != "Semua"):
+            # No results (handled in show_empty_state)
+            pass  # Info label sudah diupdate di apply_search atau apply_date_filter
         else:
+            # Default state
             self.info_label.configure(
                 text=f"📊 {total_sertifikasi} Sertifikasi | {total_peserta} Total Peserta"
             )
         
+        # Show content or empty state
         if not display_data:
             self.show_empty_state()
             return
         
+        # Create sertifikasi sections
         for sertif in display_data:
             self.create_sertifikasi_section(sertif)
     
     def show_empty_state(self):
+        """Show empty state with different messages"""
         empty_frame = ctk.CTkFrame(
             self.scroll_container,
             fg_color="#1f1f1f",
-            height=200
+            height=250  # Tambah tinggi untuk button
         )
         empty_frame.pack(fill="x", pady=50)
         
-        if self.date_filter != "Semua":
-            message = f"📭 Tidak ada sertifikasi pada tanggal {self.date_filter}"
+        # Determine message based on state
+        if self.search_text:
+            icon = "🔍"
+            message = f"Tidak ditemukan hasil untuk '{self.search_text}'"
+            submessage = "Coba kata kunci lain atau periksa ejaan"
+            color = "#ff9800"
+            show_reset = True
+        elif self.date_filter != "Semua":
+            icon = "📅"
+            message = f"Tidak ada sertifikasi pada tanggal {self.date_filter}"
+            submessage = "Pilih tanggal lain atau tambah data baru"
+            color = "#2196f3"
+            show_reset = True
         else:
-            message = "📭 Belum ada data sertifikasi"
-            
+            icon = "📭"
+            message = "Belum ada data sertifikasi"
+            submessage = "Klik tombol 'Tambah' untuk membuat sertifikasi baru"
+            color = "#666666"
+            show_reset = False
+        
+        # Icon
+        ctk.CTkLabel(
+            empty_frame,
+            text=icon,
+            font=("Arial", 48)
+        ).pack(pady=(40, 10))
+        
+        # Main message
         ctk.CTkLabel(
             empty_frame,
             text=message,
             font=("Arial", 18, "bold"),
-            text_color="#666666"
-        ).pack(pady=70)
+            text_color=color
+        ).pack(pady=(0, 5))
+        
+        # Submessage
+        ctk.CTkLabel(
+            empty_frame,
+            text=submessage,
+            font=("Arial", 12),
+            text_color="#999999"
+        ).pack(pady=(0, 20))
+        
+        # Reset button (only for search/filter)
+        if show_reset:
+            reset_btn = ctk.CTkButton(
+                empty_frame,
+                text="🔄 Reset Filter",
+                width=150,
+                height=35,
+                fg_color="#1a73e8",
+                hover_color="#1557b0",
+                corner_radius=8,
+                command=self.reset_all_filters
+            )
+            reset_btn.pack(pady=(0, 40))
+        
+    def reset_all_filters(self):
+        """Reset semua filter (search dan date)"""
+        # Clear search
+        self.search_entry.delete(0, 'end')
+        self.search_text = ""
+        self.clear_search_btn.pack_forget()
+        
+        # Reset date filter
+        self.date_filter = "Semua"
+        self.date_combo.set("Semua")
+        
+        # Clear cache
+        self.filtered_sertifikasi = []
+        self.peserta_cache.clear()
+        
+        # Refresh display
+        self.refresh_display()
         
     def create_sertifikasi_section(self, sertif):
         id_sertifikasi = sertif['id_sertifikasi']
@@ -660,85 +746,99 @@ class PesertaPage(ctk.CTkFrame):
     # INI BARU
     def apply_search(self):
         """Apply search filter"""
-        
         search_text = self.search_entry.get().strip()
-    
+        
         # Update clear button visibility
         self.update_clear_button_visibility()
-        if not self.search_text:
+        
+        # Clear search - jika input kosong
+        if not search_text:
             self.search_text = ""
             self.filtered_sertifikasi = []
             self.peserta_cache.clear()
-            self.clear_search_btn.place_forget()  # TAMBAHKAN INI
+            self.clear_search_btn.place_forget()
             self.refresh_display()
             return
-
+        
+        # Already searching same text - skip
         if search_text == self.search_text:
             return
         
+        # Update search text
         self.search_text = search_text
-        
-        # Show clear button (karena pasti ada isi)
-        self.update_clear_button_visibility()  # TAMBAHKAN INI
         
         # Show loading indicator
         self.info_label.configure(text="🔍 Mencari...")
         self.update_idletasks()
         
-        # Search sertifikasi by name
-        filtered_sertifikasi = DB_Search_Sertifikasi(self.search_text)
-        
-        # Search peserta and group by sertifikasi
-        peserta_results = DB_Search_Peserta(self.search_text)
-        
-        # Combine results: sertifikasi that match + sertifikasi with matching peserta
-        combined_sertifikasi_ids = set()
-        
-        # Add sertifikasi that match by name
-        for sertif in filtered_sertifikasi:
-            combined_sertifikasi_ids.add(sertif['id_sertifikasi'])
-        
-        # Add sertifikasi that have matching peserta
-        for id_sertifikasi in peserta_results.keys():
-            combined_sertifikasi_ids.add(id_sertifikasi)
-        
-        # Get full sertifikasi data for all matches
-        if combined_sertifikasi_ids:
-            # Apply date filter if active
-            if self.date_filter == "Semua":
-                base_data = self.all_sertifikasi
+        try:
+            # Search sertifikasi by name
+            filtered_sertifikasi = DB_Search_Sertifikasi(self.search_text)
+            
+            # Search peserta and group by sertifikasi
+            peserta_results = DB_Search_Peserta(self.search_text)
+            
+            # Combine results
+            combined_sertifikasi_ids = set()
+            
+            # Add sertifikasi that match by name
+            for sertif in filtered_sertifikasi:
+                combined_sertifikasi_ids.add(sertif['id_sertifikasi'])
+            
+            # Add sertifikasi that have matching peserta
+            for id_sertifikasi in peserta_results.keys():
+                combined_sertifikasi_ids.add(id_sertifikasi)
+            
+            # Get full sertifikasi data for all matches
+            if combined_sertifikasi_ids:
+                # Apply date filter if active
+                if self.date_filter == "Semua":
+                    base_data = self.all_sertifikasi
+                else:
+                    base_data = [s for s in self.all_sertifikasi if s['tanggal_pelatihan'] == self.date_filter]
+                
+                # Filter to only matching sertifikasi
+                self.filtered_sertifikasi = [
+                    s for s in base_data 
+                    if s['id_sertifikasi'] in combined_sertifikasi_ids
+                ]
+                
+                # Cache filtered peserta results
+                for id_sertifikasi, peserta_list in peserta_results.items():
+                    self.peserta_cache[id_sertifikasi] = peserta_list
+                
+                # Refresh display
+                self.refresh_display()
+                
+                # Update info label - HASIL DITEMUKAN
+                total_peserta = sum(len(peserta_results.get(s['id_sertifikasi'], [])) for s in self.filtered_sertifikasi)
+                self.info_label.configure(
+                    text=f"🔍 {len(self.filtered_sertifikasi)} Sertifikasi | {total_peserta} Peserta | '{self.search_text}'"
+                )
             else:
-                base_data = self.filtered_sertifikasi
-            
-            # Filter to only matching sertifikasi
-            self.filtered_sertifikasi = [
-                s for s in base_data 
-                if s['id_sertifikasi'] in combined_sertifikasi_ids
-            ]
-            
-            # Cache filtered peserta results
-            for id_sertifikasi, peserta_list in peserta_results.items():
-                self.peserta_cache[id_sertifikasi] = peserta_list
-            
-            # Refresh display
-            self.refresh_display()
-            
-            # Update info label
-            total_peserta = sum(len(peserta_results.get(s['id_sertifikasi'], [])) for s in self.filtered_sertifikasi)
-            self.info_label.configure(
-                text=f"🔍 Hasil: {len(self.filtered_sertifikasi)} Sertifikasi | {total_peserta} Peserta | Kata kunci: '{self.search_text}'"
-            )
-        else:
-            # No results found
-            self.filtered_sertifikasi = []
-            self.refresh_display()
+                # No results found - SET FILTERED KE EMPTY LIST
+                self.filtered_sertifikasi = []
+                self.peserta_cache.clear()
+                
+                # Refresh display - INI AKAN TRIGGER show_empty_state
+                self.refresh_display()
+                
+                # Update info label - TIDAK DITEMUKAN
+                self.info_label.configure(
+                    text=f"🔍 '{self.search_text}' - Tidak ada hasil"
+                )
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"Gagal mencari: {str(e)}")
+            self.info_label.configure(text="❌ Error saat mencari")
    
     # INI BARU 
     def clear_search(self):
         """Clear search and reset display"""
         self.search_entry.delete(0, 'end')
         self.search_text = ""
-        self.header_frame.focus_set()
+        self.after(10, lambda: self.header_frame.focus_set())
+        
         # Hide clear button
         self.clear_search_btn.place_forget()        
         
