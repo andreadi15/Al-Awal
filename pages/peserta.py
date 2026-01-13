@@ -842,10 +842,7 @@ class PesertaPage(ctk.CTkFrame):
         # Hide clear button
         self.clear_search_btn.place_forget()        
         
-        # Reset filtered data
         self.filtered_sertifikasi = []
-        
-        # Clear search cache
         self.peserta_cache.clear()
         
         self.refresh_display()
