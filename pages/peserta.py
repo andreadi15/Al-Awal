@@ -67,13 +67,13 @@ class PesertaPage(ctk.CTkFrame):
         self.create_tables_container()
     
     def create_header(self):
-        header_frame = ctk.CTkFrame(self, fg_color="transparent", height=80)
-        header_frame.pack(fill="x", padx=20, pady=(20, 10))
-        header_frame.pack_propagate(False)
-        header_frame.bind("<Button-1>", lambda e: header_frame.focus_set())
+        self.header_frame = ctk.CTkFrame(self, fg_color="transparent", height=80)
+        self.header_frame.pack(fill="x", padx=20, pady=(20, 10))
+        self.header_frame.pack_propagate(False)
+        self.header_frame.bind("<Button-1>", lambda e: self.header_frame.focus_set())
         
         title = ctk.CTkLabel(
-            header_frame,
+            self.header_frame,
             text="👥 Kelola Peserta",
             font=("Arial", 28, "bold"),
             text_color="#ffffff"
@@ -82,7 +82,7 @@ class PesertaPage(ctk.CTkFrame):
         title.bind("<Button-1>", lambda e: title.focus_set())
 
         self.info_label = ctk.CTkLabel(
-            header_frame,
+            self.header_frame,
             text="",
             font=("Arial", 14),
             text_color="#9e9e9e"
@@ -101,7 +101,7 @@ class PesertaPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             search_frame,
-            text="🔍 Cari:",
+            text="Cari:",
             font=("Arial", 13)
         ).pack(side="left", padx=(0, 8))
 
@@ -143,7 +143,7 @@ class PesertaPage(ctk.CTkFrame):
             height=35,
             fg_color="#1a73e8",
             hover_color="#1557b0",
-            font=("Arial", 16),
+            font=("Arial", 19),
             command=self.apply_search
         )
         search_btn.pack(side="left", padx=5)
@@ -274,21 +274,21 @@ class PesertaPage(ctk.CTkFrame):
         section_container.pack(fill="x", pady=(0, 15))
         section_container.bind("<Button-1>", lambda e: section_container.focus_set())
         
-        header_frame = ctk.CTkFrame(
+        self.header_frame = ctk.CTkFrame(
             section_container,
             fg_color="#1a73e8",
             height=80,
             cursor="hand2"
         )
-        header_frame.pack(fill="x")
-        header_frame.pack_propagate(False)
+        self.header_frame.pack(fill="x")
+        self.header_frame.pack_propagate(False)
         
-        header_frame.bind(
+        self.header_frame.bind(
             "<Button-1>",
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        left_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        left_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         left_frame.pack(side="left", fill="y", padx=(15, 0))
         
         arrow_label = ctk.CTkLabel(
@@ -323,7 +323,7 @@ class PesertaPage(ctk.CTkFrame):
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        center_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        center_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         center_frame.pack(side="left", expand=True, padx=30)
         
         date_label = ctk.CTkLabel(
@@ -352,7 +352,7 @@ class PesertaPage(ctk.CTkFrame):
             lambda e: (self.toggle_section(id_sertifikasi, section_container),section_container.focus_set())
         )
         
-        actions_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        actions_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         actions_frame.pack(side="right", padx=10)
         
         add_peserta_btn = ctk.CTkButton(
@@ -500,20 +500,20 @@ class PesertaPage(ctk.CTkFrame):
         parent._count_label = count_label
     
     def create_table_headers(self, parent):
-        header_frame = ctk.CTkFrame(parent, fg_color="#333333", height=45)
-        header_frame.pack(fill="x", padx=10, pady=(0, 2))
-        header_frame.pack_propagate(False)
+        self.header_frame = ctk.CTkFrame(parent, fg_color="#333333", height=45)
+        self.header_frame.pack(fill="x", padx=10, pady=(0, 2))
+        self.header_frame.pack_propagate(False)
         
-        header_frame.grid_columnconfigure(0, weight=0, minsize=65)   
-        header_frame.grid_columnconfigure(1, weight=0, minsize=50)   
-        header_frame.grid_columnconfigure(2, weight=0, minsize=180)  
-        header_frame.grid_columnconfigure(3, weight=0, minsize=150)  
-        header_frame.grid_columnconfigure(4, weight=0, minsize=180)  
-        header_frame.grid_columnconfigure(5, weight=0, minsize=160)  
-        header_frame.grid_columnconfigure(6, weight=0, minsize=190)  
-        header_frame.grid_columnconfigure(7, weight=0, minsize=270)  
-        header_frame.grid_columnconfigure(8, weight=0, minsize=125)  
-        header_frame.grid_columnconfigure(9, weight=0, minsize=100)  
+        self.header_frame.grid_columnconfigure(0, weight=0, minsize=65)   
+        self.header_frame.grid_columnconfigure(1, weight=0, minsize=50)   
+        self.header_frame.grid_columnconfigure(2, weight=0, minsize=180)  
+        self.header_frame.grid_columnconfigure(3, weight=0, minsize=150)  
+        self.header_frame.grid_columnconfigure(4, weight=0, minsize=180)  
+        self.header_frame.grid_columnconfigure(5, weight=0, minsize=160)  
+        self.header_frame.grid_columnconfigure(6, weight=0, minsize=190)  
+        self.header_frame.grid_columnconfigure(7, weight=0, minsize=270)  
+        self.header_frame.grid_columnconfigure(8, weight=0, minsize=125)  
+        self.header_frame.grid_columnconfigure(9, weight=0, minsize=100)  
         
         headers = [
             ("   ☑", 0),
@@ -530,7 +530,7 @@ class PesertaPage(ctk.CTkFrame):
         
         for header_text, col_index in headers:
             label = ctk.CTkLabel(
-                header_frame,
+                self.header_frame,
                 text=header_text,
                 font=("Arial", 13, "bold"),
                 text_color="#ffffff",
@@ -738,7 +738,7 @@ class PesertaPage(ctk.CTkFrame):
         """Clear search and reset display"""
         self.search_entry.delete(0, 'end')
         self.search_text = ""
-        
+        self.header_frame.focus_set()
         # Hide clear button
         self.clear_search_btn.place_forget()        
         
@@ -756,7 +756,7 @@ class PesertaPage(ctk.CTkFrame):
         """Show/hide clear button based on search entry content"""
         if self.search_entry.get().strip():
             # Show clear button
-            self.clear_search_btn.place(in_=self.search_entry, relx=0.92, rely=0.5, anchor="e")
+            self.clear_search_btn.place(in_=self.search_entry, relx=0.86, rely=0.5, anchor="w")
         else:
             # Hide clear button
             self.clear_search_btn.place_forget()
