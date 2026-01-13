@@ -12,7 +12,8 @@ from services.database import (
     DB_Get_Peserta_By_Sertifikasi,
     DB_Delete_Sertifikasi,
     DB_Delete_Peserta_Batch,
-    DB_Search_Peserta
+    DB_Search_Peserta,
+    DB_Search_Sertifikasi
 )
 
 class PesertaPage(ctk.CTkFrame):
@@ -97,34 +98,55 @@ class PesertaPage(ctk.CTkFrame):
         
         search_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
         search_frame.pack(side="left", padx=15, pady=10)
-        
+
         ctk.CTkLabel(
             search_frame,
             text="🔍 Cari:",
             font=("Arial", 13)
         ).pack(side="left", padx=(0, 8))
 
-        
+        # Container untuk search entry + clear button
+        search_container = ctk.CTkFrame(search_frame, fg_color="transparent")
+        search_container.pack(side="left")
+
         self.search_entry = ctk.CTkEntry(
-            search_frame,
+            search_container,
             width=250,
             height=35,
-            placeholder_text="Nama, NIK, atau No. Peserta..."
+            placeholder_text="Nama, NIK, Skema, Instansi..."
         )
-        
         self.search_entry.pack(side="left")
-        self.search_entry.bind("<KeyRelease>", lambda e: self.apply_search())
-        
-        clear_btn = ctk.CTkButton(
-            search_frame,
+        self.search_entry.bind("<Return>", lambda e: self.apply_search())
+        self.search_entry.bind("<KeyRelease>", lambda e: self.update_clear_button_visibility())
+
+        # Clear button (inside search entry - hidden by default)
+        self.clear_search_btn = ctk.CTkButton(
+            search_container,
             text="✕",
-            width=35,
-            height=35,
-            fg_color="#d32f2f",
-            hover_color="#b71c1c",
+            width=30,
+            height=25,
+            fg_color="transparent",
+            hover_color="#ffebee",
+            text_color="#d32f2f",
+            font=("Arial", 16, "bold"),
             command=self.clear_search
         )
-        clear_btn.pack(side="left", padx=5)
+        # Position it inside the entry field on the right
+        self.clear_search_btn.place(in_=self.search_entry, relx=0.92, rely=0.5, anchor="e")
+        self.clear_search_btn.place_forget()  # Hide initially
+
+        # Search button
+        search_btn = ctk.CTkButton(
+            search_frame,
+            text="🔍",
+            width=35,
+            height=35,
+            fg_color="#1a73e8",
+            hover_color="#1557b0",
+            font=("Arial", 16),
+            command=self.apply_search
+        )
+        search_btn.pack(side="left", padx=5)
         
         date_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
         date_frame.pack(side="left", padx=15, pady=10)
@@ -635,23 +657,110 @@ class PesertaPage(ctk.CTkFrame):
             except Exception as e:
                 messagebox.showerror("Error", f"Gagal menghapus data: {str(e)}")
     
+    # INI BARU
     def apply_search(self):
-        self.search_text = self.search_entry.get().strip().lower()
+        """Apply search filter"""
         
+        search_text = self.search_entry.get().strip()
+    
+        # Update clear button visibility
+        self.update_clear_button_visibility()
         if not self.search_text:
+            self.search_text = ""
+            self.filtered_sertifikasi = []
+            self.peserta_cache.clear()
+            self.clear_search_btn.place_forget()  # TAMBAHKAN INI
+            self.refresh_display()
+            return
+
+        if search_text == self.search_text:
             return
         
-        # TODO: Implement search across all peserta
-        # Could use DB_Search_Peserta() function
-        messagebox.showinfo(
-            "Search",
-            f"Fitur pencarian untuk '{self.search_text}' akan segera ditambahkan"
-        )
-    
+        self.search_text = search_text
+        
+        # Show clear button (karena pasti ada isi)
+        self.update_clear_button_visibility()  # TAMBAHKAN INI
+        
+        # Show loading indicator
+        self.info_label.configure(text="🔍 Mencari...")
+        self.update_idletasks()
+        
+        # Search sertifikasi by name
+        filtered_sertifikasi = DB_Search_Sertifikasi(self.search_text)
+        
+        # Search peserta and group by sertifikasi
+        peserta_results = DB_Search_Peserta(self.search_text)
+        
+        # Combine results: sertifikasi that match + sertifikasi with matching peserta
+        combined_sertifikasi_ids = set()
+        
+        # Add sertifikasi that match by name
+        for sertif in filtered_sertifikasi:
+            combined_sertifikasi_ids.add(sertif['id_sertifikasi'])
+        
+        # Add sertifikasi that have matching peserta
+        for id_sertifikasi in peserta_results.keys():
+            combined_sertifikasi_ids.add(id_sertifikasi)
+        
+        # Get full sertifikasi data for all matches
+        if combined_sertifikasi_ids:
+            # Apply date filter if active
+            if self.date_filter == "Semua":
+                base_data = self.all_sertifikasi
+            else:
+                base_data = self.filtered_sertifikasi
+            
+            # Filter to only matching sertifikasi
+            self.filtered_sertifikasi = [
+                s for s in base_data 
+                if s['id_sertifikasi'] in combined_sertifikasi_ids
+            ]
+            
+            # Cache filtered peserta results
+            for id_sertifikasi, peserta_list in peserta_results.items():
+                self.peserta_cache[id_sertifikasi] = peserta_list
+            
+            # Refresh display
+            self.refresh_display()
+            
+            # Update info label
+            total_peserta = sum(len(peserta_results.get(s['id_sertifikasi'], [])) for s in self.filtered_sertifikasi)
+            self.info_label.configure(
+                text=f"🔍 Hasil: {len(self.filtered_sertifikasi)} Sertifikasi | {total_peserta} Peserta | Kata kunci: '{self.search_text}'"
+            )
+        else:
+            # No results found
+            self.filtered_sertifikasi = []
+            self.refresh_display()
+   
+    # INI BARU 
     def clear_search(self):
+        """Clear search and reset display"""
         self.search_entry.delete(0, 'end')
         self.search_text = ""
+        
+        # Hide clear button
+        self.clear_search_btn.place_forget()        
+        
+        # Reset filtered data
+        self.filtered_sertifikasi = []
+        
+        # Clear search cache
+        self.peserta_cache.clear()
+        
+        # Refresh display to show all
+        self.refresh_display()
     
+    # INI BARU
+    def update_clear_button_visibility(self):
+        """Show/hide clear button based on search entry content"""
+        if self.search_entry.get().strip():
+            # Show clear button
+            self.clear_search_btn.place(in_=self.search_entry, relx=0.92, rely=0.5, anchor="e")
+        else:
+            # Hide clear button
+            self.clear_search_btn.place_forget()
+            
     def refresh_all(self):
         self.peserta_cache.clear()
         self.selected_ids.clear()

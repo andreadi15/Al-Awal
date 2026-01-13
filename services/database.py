@@ -238,16 +238,22 @@ def DB_Get_Peserta_Count_By_Sertifikasi(id_sertifikasi: str) -> int:
     conn.close()
     return count
 
+# INI BARU
 def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
+    """
+    Search peserta across all fields
+    Returns dict grouped by id_sertifikasi
+    """
     conn = get_connection()
     cursor = conn.cursor()
     
     search_pattern = f"%{search_text}%"
     
     if id_sertifikasi:
+        # Search within specific sertifikasi
         cursor.execute("""
             SELECT 
-                id, id_peserta, id_sertifikasi, skema,
+                id_peserta, id_sertifikasi, skema,
                 nama, nik, tempat_lahir, tanggal_lahir, alamat,
                 kelurahan, kecamatan, kabupaten, provinsi,
                 telepon, pendidikan, instansi
@@ -256,14 +262,17 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
             AND (
                 nama LIKE ? OR 
                 nik LIKE ? OR 
-                no_peserta LIKE ?
+                id_peserta LIKE ? OR
+                skema LIKE ? OR
+                instansi LIKE ?
             )
             ORDER BY nama ASC
-        """, (id_sertifikasi, search_pattern, search_pattern, search_pattern))
+        """, (id_sertifikasi, search_pattern, search_pattern, search_pattern, search_pattern, search_pattern))
     else:
+        # Search across all peserta
         cursor.execute("""
             SELECT 
-                id, id_peserta, id_sertifikasi, skema,
+                id_peserta, id_sertifikasi, skema,
                 nama, nik, tempat_lahir, tanggal_lahir, alamat,
                 kelurahan, kecamatan, kabupaten, provinsi,
                 telepon, pendidikan, instansi
@@ -271,23 +280,46 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
             WHERE 
                 nama LIKE ? OR 
                 nik LIKE ? OR 
-                id_peserta LIKE ?
+                id_peserta LIKE ? OR
+                skema LIKE ? OR
+                instansi LIKE ?
             ORDER BY nama ASC
-        """, (search_pattern, search_pattern, search_pattern))
+        """, (search_pattern, search_pattern, search_pattern, search_pattern, search_pattern))
 
     rows = cursor.fetchall()
     conn.close()
 
-    return [
-        {
-            'id': row[0], 'id_peserta': row[1], 'id_sertifikasi': row[2], 'skema': row[3], 'nama': row[4],
-            'nik': row[5], 'tempat_lahir': row[6], 'tanggal_lahir': return_format_tanggal(row[7]),
-            'alamat': row[8], 'kelurahan': row[9], 'kecamatan': row[10],
-            'kabupaten': row[11], 'provinsi': row[12], 'telepon': row[13],
-            'pendidikan': row[14], 'instansi': row[15]
-        }
-        for row in rows
-    ]
+    # Convert to PesertaModel grouped by id_sertifikasi
+    grouped_results = {}
+    for row in rows:
+        peserta = PesertaModel(
+            id_peserta=row[0],
+            id_sertifikasi=row[1],
+            skema=row[2],
+            nama=row[3],
+            nik=row[4],
+            tempat_lahir=row[5],
+            tanggal_lahir=return_format_tanggal(row[6]),
+            alamat=row[7],
+            kelurahan=row[8],
+            kecamatan=row[9],
+            kabupaten=row[10],
+            provinsi=row[11],
+            telepon=row[12],
+            pendidikan=row[13],
+            instansi=row[14]
+        )
+        
+        # Group by id_sertifikasi
+        if peserta.id_sertifikasi not in grouped_results:
+            grouped_results[peserta.id_sertifikasi] = []
+        grouped_results[peserta.id_sertifikasi].append(peserta)
+    
+    if DEBUG:
+        total = sum(len(v) for v in grouped_results.values())
+        print(f"[DB] Search found {total} peserta in {len(grouped_results)} sertifikasi")
+    
+    return grouped_results
 
 def DB_Delete_Peserta_By_Sertifikasi(id_sertifikasi):
     conn = get_connection()
@@ -559,4 +591,45 @@ def DB_Delete_Sertifikasi(id_sertifikasi: str, delete_peserta: bool = True):
     finally:
         conn.close()
         
+# INI BARU
+def DB_Search_Sertifikasi(search_text: str):
+    """
+    Search sertifikasi by name
+    Returns list of sertifikasi matching the search
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    search_pattern = f"%{search_text}%"
+    
+    cursor.execute("""
+        SELECT 
+            s.id_sertifikasi,
+            s.sertifikasi,
+            s.tanggal_pelatihan,
+            COUNT(p.id) as jumlah_peserta
+        FROM sertifikasi s
+        LEFT JOIN peserta p ON s.id_sertifikasi = p.id_sertifikasi
+        WHERE s.sertifikasi LIKE ?
+        GROUP BY s.id_sertifikasi
+        ORDER BY s.tanggal_pelatihan DESC
+    """, (search_pattern,))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    data_list = []
+    for row in rows:
+        data_list.append({
+            "id_sertifikasi": row[0],
+            "sertifikasi": row[1],
+            "tanggal_pelatihan": row[2],
+            "jumlah_peserta": row[3]
+        })
+    
+    if DEBUG:
+        print(f"[DB] Search found {len(data_list)} sertifikasi")
+    
+    return data_list
+
 # ======= [END] SERTIFIKASI ============== 
