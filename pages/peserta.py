@@ -848,10 +848,8 @@ class PesertaPage(ctk.CTkFrame):
         # Clear search cache
         self.peserta_cache.clear()
         
-        # Refresh display to show all
         self.refresh_display()
     
-    # INI BARU
     def update_clear_button_visibility(self):
         """Show/hide clear button based on search entry content"""
         if self.search_entry.get().strip():
