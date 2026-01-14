@@ -585,9 +585,17 @@ class InputPesertaPage(ctk.CTkFrame):
             return "break"
         
     def _on_mousewheel(self, event):
-        self.main_container._parent_canvas.yview_scroll(
-            int(-1 * (event.delta/120) * 50), 
-            "units")
+        try:
+            canvas = self.main_container._parent_canvas
+            if not canvas.winfo_exists():
+                return
+
+            canvas.yview_scroll(
+                int(-1 * (event.delta / 120)),
+                "units"
+            )
+        except Exception:
+            pass
         
     def scroll_to_widget(self, widget):
         try:
