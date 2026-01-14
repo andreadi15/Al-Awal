@@ -361,6 +361,8 @@ class InputPesertaPage(ctk.CTkFrame):
             else:
                 self.current_index = 0
                 self.clear_form()
+            
+            self.save_state()
                 
             print(f"[INFO] Loaded {len(self.list_peserta)} peserta from database")
             
@@ -504,18 +506,27 @@ class InputPesertaPage(ctk.CTkFrame):
                     
                     self.simpan_peserta(self.list_peserta)
                     
+                    # ✅ CLEAR session setelah save
+                    self.clear_saved_state()
+                    
                     messagebox.showinfo(
                         "Sukses",
                         f"Berhasil menyimpan perubahan!"
                     )
+                else:
+                    # ✅ CLEAR session jika tidak ada perubahan
+                    self.clear_saved_state()
                 
             except Exception as e:
                 print(f"Gagal memproses data: {str(e)}")
                 self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
                 return
+        else:
+            # ✅ CLEAR session jika list kosong (tidak ada unsaved data)
+            self.clear_saved_state()
         
         self._update_selected_id()
-        self.load_peserta_from_sertifikasi()
+        self.load_peserta_from_sertifikasi()  # Ini akan auto-save ke session
         self.refresh_UI_Form()
     
     def _update_selected_id(self):
@@ -1024,20 +1035,22 @@ class InputPesertaPage(ctk.CTkFrame):
                 'instansi': self.entries["instansi"].get(),
             }
             
-            # Save state
+            # Save state (SET akan otomatis overwrite session lama)
             state = {
                 'id_sertifikasi': self.selected_id_sertifikasi,
                 'current_index': self.current_index,
-                'list_peserta': [p.to_dict() for p in self.list_peserta],  # Convert to dict for serialization
+                'list_peserta': [p.to_dict() for p in self.list_peserta],
                 'current_form_data': current_form_data,
                 'scroll_position': self.main_container._parent_canvas.yview()[0]
             }
             
             session.set('input_peserta_state', state)
-            print(f"[INPUT] State saved: {len(self.list_peserta)} peserta, current index: {self.current_index}")
+            print(f"[INPUT] ✅ State saved: {len(self.list_peserta)} peserta, index: {self.current_index}, sertifikasi: {self.selected_id_sertifikasi}")
             
         except Exception as e:
-            print(f"[INPUT] Error saving state: {e}")
+            print(f"[INPUT] ❌ Error saving state: {e}")
+            import traceback
+            traceback.print_exc()
 
     def restore_state(self):
         """

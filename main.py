@@ -134,11 +134,20 @@ class App(ctk.CTk):
 
     def show_page(self, page_name, id_sertifikasi=None):
         """
-        Ganti halaman yang ditampilkan
-        - Destroy halaman lama
-        - Load halaman baru
-        - Update highlight menu (active state tetap di hover color)
+        Ganti halaman yang ditampilkan dengan auto-save state
         """
+        # Save current page state before switching
+        if self.current_page:
+            # Get current page widget
+            for widget in self.content_container.winfo_children():
+                if hasattr(widget, 'save_state'):
+                    try:
+                        widget.save_state()
+                        print(f"[APP] Saved state for: {self.current_page}")
+                    except Exception as e:
+                        print(f"[APP] Error saving state: {e}")
+                break
+        
         # Destroy current page
         if self.current_page:
             for widget in self.content_container.winfo_children():
@@ -147,11 +156,10 @@ class App(ctk.CTk):
         # Update menu highlights - reset semua button dulu
         for name, btn in self.menu_buttons.items():
             if name == page_name:
-                # Button yang diklik: tetap di hover color (#333333)
+                # Button yang diklik: tetap di hover color
                 btn.configure(fg_color="#B8B8B8", text_color="#333333")
             else:
                 # Button lain: kembalikan ke transparent
-                # Kecuali sedang di-hover
                 if not getattr(btn, '_is_hovered', False):
                     btn.configure(fg_color="transparent", text_color="#ffffff")
         
