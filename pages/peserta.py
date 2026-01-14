@@ -201,7 +201,21 @@ class PesertaPage(ctk.CTkFrame):
             fg_color="transparent"
         )
         self.scroll_container.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        self.scroll_container.bind_all("<MouseWheel>", self._on_mousewheel)
 
+    def _on_mousewheel(self, event):
+        try:
+            canvas = self.scroll_container._parent_canvas
+            if not canvas.winfo_exists():
+                return
+
+            canvas.yview_scroll(
+                int(-1 * (event.delta / 120) * 50),
+                "units"
+            )
+        except Exception:
+            pass
+        
     def apply_date_filter(self, selected_value):
         self.date_filter = selected_value
         
