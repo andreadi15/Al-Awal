@@ -21,7 +21,6 @@ class InputPesertaPage(ctk.CTkFrame):
         self.entries = {}
         self.error_labels = {}
         self.list_peserta = []
-        self.placeholders = {}
         
         if id_sertifikasi:
             self.selected_id_sertifikasi = id_sertifikasi
@@ -189,72 +188,62 @@ class InputPesertaPage(ctk.CTkFrame):
         current_row += 2
         
         # 2. Nama Lengkap
-        self.placeholders["nama"] = "Masukkan nama lengkap"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["nama"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Masukkan nama lengkap")
         self.entries["nama"] = entry.widget
         form_row.FormRow(form_content, current_row, "Nama Lengkap", self.entries["nama"])
         current_row += 2
         
         # 3. NIK (Custom dengan placeholder ─)   
-        self.placeholders["nik"] = ""
-        entry = create_entry.createEntry(form_content, "nik", placeholder=self.placeholders["nik"])
+        entry = create_entry.createEntry(form_content, "nik", placeholder="")
         self.entries["nik"] = entry.widget
         form_row.FormRow(form_content, current_row, "NIK", self.entries["nik"])
         current_row += 2
         
         # 4. Tempat Lahir
-        self.placeholders["tempat_lahir"] = "Tempat lahir"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["tempat_lahir"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Tempat lahir")
         self.entries["tempat_lahir"] = entry.widget
         form_row.FormRow(form_content, current_row, "Tempat Lahir", self.entries["tempat_lahir"])
         current_row += 2
         
         # 5. Tanggal Lahir 
-        self.placeholders["tanggal_lahir"] = "DD-MM-YYYY"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["tanggal_lahir"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="DD-MM-YYYY")
         self.entries["tanggal_lahir"] = entry.widget
         form_row.FormRow(form_content,current_row,"Tanggal Lahir",self.entries["tanggal_lahir"])
         self.entries["tanggal_lahir"].bind("<KeyPress>", self.format_tanggal_input)
         current_row += 2
         
         # 6. Alamat 
-        self.placeholders["alamat"] = "Alamat lengkap"
-        entry = create_entry.createEntry(form_content, "textbox", placeholder=self.placeholders["alamat"])
+        entry = create_entry.createEntry(form_content, "textbox", placeholder="Alamat lengkap")
         self.entries["alamat"] = entry.widget
         form_row.FormRow(form_content, current_row, "Alamat", self.entries["alamat"])
         current_row += 2
         
         # 7. Kelurahan
-        self.placeholders["kelurahan"] = "Nama kelurahan"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["kelurahan"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama kelurahan")
         self.entries["kelurahan"] = entry.widget
         form_row.FormRow(form_content, current_row, "Kelurahan", self.entries["kelurahan"])
         current_row += 2
         
         # 8. Kecamatan
-        self.placeholders["kecamatan"] = "Nama kecamatan"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["kecamatan"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama kecamatan")
         self.entries["kecamatan"] = entry.widget
         form_row.FormRow(form_content, current_row, "Kecamatan", self.entries["kecamatan"])
         current_row += 2
         
         # 9. Kabupaten
-        self.placeholders["kabupaten"] = "Nama kabupaten/kota"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["kabupaten"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama kabupaten/kota")
         self.entries["kabupaten"] = entry.widget
         form_row.FormRow(form_content, current_row, "Kabupaten", self.entries["kabupaten"])
         current_row += 2
         
         # 10. Provinsi
-        self.placeholders["provinsi"] = "Nama provinsi"
-        entry = create_entry.createEntry(form_content,"entry", placeholder=self.placeholders["provinsi"])
+        entry = create_entry.createEntry(form_content,"entry", placeholder="Nama provinsi")
         self.entries["provinsi"] = entry.widget
         form_row.FormRow(form_content, current_row, "Provinsi", self.entries["provinsi"])
         current_row += 2
         
         # 11. No. Telepon
-        self.placeholders["telepon"] = "08xxxxxxxxxx"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["telepon"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="08xxxxxxxxxx")
         self.entries["telepon"] = entry.widget
         form_row.FormRow(form_content, current_row, "No. Telepon", self.entries["telepon"])
         self.entries["telepon"].bind("<KeyPress>", self.format_no_telepon)
@@ -267,8 +256,7 @@ class InputPesertaPage(ctk.CTkFrame):
         current_row += 2
         
         # 13. Instansi
-        self.placeholders["instansi"] = "Nama Instansi"
-        entry = create_entry.createEntry(form_content, "entry", placeholder=self.placeholders["instansi"])
+        entry = create_entry.createEntry(form_content, "entry", placeholder="Nama Instansi")
         self.entries["instansi"] = entry.widget
         form_row.FormRow(form_content, current_row, "Instansi", self.entries["instansi"])
         current_row += 2
@@ -648,6 +636,11 @@ class InputPesertaPage(ctk.CTkFrame):
             id_peserta = f"PSRT-{uuid.uuid4().hex[:8].upper()}"
             if not DB_Get_Peserta_By_Id(id_peserta):
                 break
+        if "<pilih skema>" in self.entries["skema"].get().strip().lower():
+            skema = ""
+        else:
+            skema = self.entries["skema"].get().upper()
+        
         if "<pilih pendidikan>" in self.entries["pendidikan"].get().strip().lower():
             pendidikan = ""
         else:
@@ -656,7 +649,7 @@ class InputPesertaPage(ctk.CTkFrame):
         return PesertaModel(
             id_peserta=id_peserta,
             id_sertifikasi=self.selected_id_sertifikasi,
-            skema=self.entries["skema"].get().upper(),
+            skema=skema,
             nama=self.entries["nama"].get().upper(),
             nik=self.entries["nik"].get_value(),
             tempat_lahir=self.entries["tempat_lahir"].get().upper(),
@@ -672,7 +665,10 @@ class InputPesertaPage(ctk.CTkFrame):
         )
  
     def load_form(self, peserta: PesertaModel):
-        self.entries["skema"].set(peserta.skema)
+        if not peserta.skema:
+            self.entries["skema"].set("<Pilih Skema>")
+        else:
+            self.entries["skema"].set(peserta.skema)
         
         self.entries["nama"].delete(0, "end")
         self.entries["nama"].insert(0, peserta.nama)
@@ -705,7 +701,10 @@ class InputPesertaPage(ctk.CTkFrame):
         self.entries["telepon"].delete(0, "end")
         self.entries["telepon"].insert(0, peserta.telepon)
         
-        self.entries["pendidikan"].set(peserta.pendidikan)
+        if not peserta.pendidikan:
+            self.entries["pendidikan"].set("<Pilih Pendidikan>")
+        else:
+            self.entries["pendidikan"].set(peserta.pendidikan)
         
         self.entries["instansi"].delete(0, "end")
         self.entries["instansi"].insert(0, peserta.instansi)
@@ -769,7 +768,6 @@ class InputPesertaPage(ctk.CTkFrame):
        
     def clear_form(self):
         self.scroll_to_widget(self.header_label)
-        self.form_frame.focus_set()
 
         for key, widget in self.entries.items():
 
@@ -801,10 +799,6 @@ class InputPesertaPage(ctk.CTkFrame):
             # =====================
             if isinstance(widget, ctk.CTkTextbox):
                 widget.delete("1.0", "end")
-
-                placeholder = self.placeholders.get(key)
-                if placeholder:
-                    widget.insert("1.0", placeholder)
                 continue
 
             # =====================
@@ -812,13 +806,13 @@ class InputPesertaPage(ctk.CTkFrame):
             # =====================
             try:
                 widget.delete(0, "end")
-
-                placeholder = self.placeholders.get(key)
-                if placeholder:
-                    widget.insert(0, placeholder)
-
+                widget.focus_set()
+                self.entries["sertifikasi"].focus_set()
             except Exception:
                 pass
+        
+        self.form_frame.focus_set()
+
          
     def refresh_UI_Form(self):
         self.counter_label.configure(text=f"Peserta #{self.current_index + 1}")
