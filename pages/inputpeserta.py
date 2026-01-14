@@ -708,6 +708,9 @@ class InputPesertaPage(ctk.CTkFrame):
         
         self.entries["instansi"].delete(0, "end")
         self.entries["instansi"].insert(0, peserta.instansi)
+        
+        self.aktivated_placeholder()
+        self.after(10, lambda: self.form_frame.focus_set())
     
     def next_peserta(self):
         if len(self.sertifikasi) <= 0:
@@ -766,6 +769,12 @@ class InputPesertaPage(ctk.CTkFrame):
             self.load_form(self.list_peserta[self.current_index])
             self.refresh_UI_Form()
        
+    def aktivated_placeholder(self):
+         for key, widget in self.entries.items():
+            if isinstance(widget, ctk.CTkEntry):
+                widget._activate_placeholder()
+                continue
+                        
     def clear_form(self):
         self.scroll_to_widget(self.header_label)
 
@@ -806,14 +815,12 @@ class InputPesertaPage(ctk.CTkFrame):
             # =====================
             try:
                 widget.delete(0, "end")
-                widget.focus_set()
-                self.entries["sertifikasi"].focus_set()
             except Exception:
                 pass
+       
+        self.aktivated_placeholder()
+        self.after(10, lambda: self.form_frame.focus_set())
         
-        self.form_frame.focus_set()
-
-         
     def refresh_UI_Form(self):
         self.counter_label.configure(text=f"Peserta #{self.current_index + 1}")
         
@@ -1071,9 +1078,9 @@ class InputPesertaPage(ctk.CTkFrame):
                 self.current_index = state.get('current_index', 0)
                 
                 # Restore current form data
-                current_form = [PesertaModel.from_dict(p) for p in state.get('current_form_data', {})]
+                current_form = state.get('current_form_data', {})
                 if current_form:
-                    self._load_form_data(current_form)
+                    self.load_form(current_form)
                     print(f"[INPUT] Restored form data at index {self.current_index}")
                 
                 # Refresh UI
@@ -1093,76 +1100,6 @@ class InputPesertaPage(ctk.CTkFrame):
             print(f"[INPUT] Error restoring state: {e}")
             import traceback
             traceback.print_exc()
-
-    def _load_form_data(self, form_data: PesertaModel):
-        """Helper method to load form data from dict"""
-        try:
-            # Skema
-            if form_data.get('skema'):
-                self.entries["skema"].set(form_data.skema)
-            
-            # Nama
-            self.entries["nama"].delete(0, "end")
-            if form_data.get('nama'):
-                self.entries["nama"].insert(0, form_data.nama)
-            
-            # NIK
-            if form_data.get('nik'):
-                self.entries["nik"]._value = form_data.nik
-                self.entries["nik"].delete(0, "end")
-                self.entries["nik"].insert(0, self.entries["nik"]._format())
-            
-            # Tempat Lahir
-            self.entries["tempat_lahir"].delete(0, "end")
-            if form_data.get('tempat_lahir'):
-                self.entries["tempat_lahir"].insert(0, form_data.tempat_lahir)
-            
-            # Tanggal Lahir
-            self.entries["tanggal_lahir"].delete(0, "end")
-            if form_data.get('tanggal_lahir'):
-                self.entries["tanggal_lahir"].insert(0, form_data.tanggal_lahir)
-            
-            # Alamat
-            self.entries["alamat"].delete("1.0", "end")
-            if form_data.get('alamat'):
-                self.entries["alamat"].insert("1.0", form_data.alamat)
-            
-            # Kelurahan
-            self.entries["kelurahan"].delete(0, "end")
-            if form_data.get('kelurahan'):
-                self.entries["kelurahan"].insert(0, form_data.kelurahan)
-            
-            # Kecamatan
-            self.entries["kecamatan"].delete(0, "end")
-            if form_data.get('kecamatan'):
-                self.entries["kecamatan"].insert(0, form_data.kecamatan)
-            
-            # Kabupaten
-            self.entries["kabupaten"].delete(0, "end")
-            if form_data.get('kabupaten'):
-                self.entries["kabupaten"].insert(0, form_data['kabupaten'])
-            
-            # Provinsi
-            self.entries["provinsi"].delete(0, "end")
-            if form_data.get('provinsi'):
-                self.entries["provinsi"].insert(0, form_data['provinsi'])
-            
-            # Telepon
-            self.entries["telepon"].delete(0, "end")
-            if form_data.get('telepon'):
-                self.entries["telepon"].insert(0, form_data['telepon'])
-            
-            # Pendidikan
-            if form_data.get('pendidikan'):
-                self.entries["pendidikan"].set(form_data['pendidikan'])
-            
-            # Instansi
-            self.entries["instansi"].delete(0, "end")
-            if form_data.get('instansi'):
-                self.entries["instansi"].insert(0, form_data['instansi'])
-                
-        except Exception as e:
-            print(f"[INPUT] Error loading form data: {e}")
 
     def clear_saved_state(self):
         """
