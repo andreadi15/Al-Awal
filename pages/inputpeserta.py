@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 import re, uuid
 from models.peserta_model import PesertaModel
+from services.session import session
 from services.database import (
     DB_Save_Peserta,
     DB_Get_All_Sertifikasi,
@@ -37,13 +38,19 @@ class InputPesertaPage(ctk.CTkFrame):
         self._build_container_data()
         self._build_form()
         
-        
         if self.selected_id_sertifikasi:
             self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
         else:
             self._update_selected_id()
         
-        if self.selected_id_sertifikasi:
+        # Check if we should restore state or load from DB
+        has_saved_state = session.has('input_peserta_state')
+        
+        if has_saved_state:
+            # Restore from session
+            self.restore_state()
+        elif self.selected_id_sertifikasi:
+            # Load from database
             self.load_peserta_from_sertifikasi()
         
         self.refresh_UI_Form()
@@ -969,6 +976,8 @@ class InputPesertaPage(ctk.CTkFrame):
         try:
             self.simpan_peserta(self.list_peserta)
             
+            self.clear_saved_state()
+            
             messagebox.showinfo(
                 "Sukses",
                 f"Berhasil menyimpan {len(self.list_peserta)} peserta!"
@@ -991,3 +1000,166 @@ class InputPesertaPage(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Err",f"[ERROR] Gagal menyimpan peserta: {e}")
             raise e
+        
+    def save_state(self):
+        """
+        Save current form state to session before leaving page
+        Dipanggil otomatis saat pindah page
+        """
+        try:
+            # Collect current form data (tanpa validasi)
+            current_form_data = {
+                'skema': self.entries["skema"].get(),
+                'nama': self.entries["nama"].get(),
+                'nik': self.entries["nik"].get_value(),
+                'tempat_lahir': self.entries["tempat_lahir"].get(),
+                'tanggal_lahir': self.entries["tanggal_lahir"].get(),
+                'alamat': self.entries["alamat"].get("1.0", "end").strip(),
+                'kelurahan': self.entries["kelurahan"].get(),
+                'kecamatan': self.entries["kecamatan"].get(),
+                'kabupaten': self.entries["kabupaten"].get(),
+                'provinsi': self.entries["provinsi"].get(),
+                'telepon': self.entries["telepon"].get(),
+                'pendidikan': self.entries["pendidikan"].get(),
+                'instansi': self.entries["instansi"].get(),
+            }
+            
+            # Save state
+            state = {
+                'id_sertifikasi': self.selected_id_sertifikasi,
+                'current_index': self.current_index,
+                'list_peserta': [p.to_dict() for p in self.list_peserta],  # Convert to dict for serialization
+                'current_form_data': current_form_data,
+                'scroll_position': self.main_container._parent_canvas.yview()[0]
+            }
+            
+            session.set('input_peserta_state', state)
+            print(f"[INPUT] State saved: {len(self.list_peserta)} peserta, current index: {self.current_index}")
+            
+        except Exception as e:
+            print(f"[INPUT] Error saving state: {e}")
+
+    def restore_state(self):
+        """
+        Restore form state from session when returning to page
+        Dipanggil otomatis saat page di-load
+        """
+        state = session.get('input_peserta_state')
+        
+        if not state:
+            print("[INPUT] No saved state found")
+            return
+        
+        try:
+            # Restore sertifikasi selection
+            saved_id = state.get('id_sertifikasi')
+            if saved_id and saved_id == self.selected_id_sertifikasi:
+                # Restore list peserta
+                saved_peserta_list = state.get('list_peserta', [])
+                if saved_peserta_list:
+                    self.list_peserta = [PesertaModel.from_dict(p) for p in saved_peserta_list]
+                    print(f"[INPUT] Restored {len(self.list_peserta)} peserta from session")
+                
+                # Restore current index
+                self.current_index = state.get('current_index', 0)
+                
+                # Restore current form data
+                current_form = state.get('current_form_data', {})
+                if current_form:
+                    self._load_form_data(current_form)
+                    print(f"[INPUT] Restored form data at index {self.current_index}")
+                
+                # Refresh UI
+                self.refresh_UI_Form()
+                
+                # Restore scroll position
+                scroll_pos = state.get('scroll_position', 0)
+                if scroll_pos:
+                    self.after(100, lambda: self.main_container._parent_canvas.yview_moveto(scroll_pos))
+                
+                print(f"[INPUT] State fully restored")
+            else:
+                print(f"[INPUT] Sertifikasi ID mismatch, clearing state")
+                session.clear('input_peserta_state')
+                
+        except Exception as e:
+            print(f"[INPUT] Error restoring state: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _load_form_data(self, form_data):
+        """Helper method to load form data from dict"""
+        try:
+            # Skema
+            if form_data.get('skema'):
+                self.entries["skema"].set(form_data['skema'])
+            
+            # Nama
+            self.entries["nama"].delete(0, "end")
+            if form_data.get('nama'):
+                self.entries["nama"].insert(0, form_data['nama'])
+            
+            # NIK
+            if form_data.get('nik'):
+                self.entries["nik"]._value = form_data['nik']
+                self.entries["nik"].delete(0, "end")
+                self.entries["nik"].insert(0, self.entries["nik"]._format())
+            
+            # Tempat Lahir
+            self.entries["tempat_lahir"].delete(0, "end")
+            if form_data.get('tempat_lahir'):
+                self.entries["tempat_lahir"].insert(0, form_data['tempat_lahir'])
+            
+            # Tanggal Lahir
+            self.entries["tanggal_lahir"].delete(0, "end")
+            if form_data.get('tanggal_lahir'):
+                self.entries["tanggal_lahir"].insert(0, form_data['tanggal_lahir'])
+            
+            # Alamat
+            self.entries["alamat"].delete("1.0", "end")
+            if form_data.get('alamat'):
+                self.entries["alamat"].insert("1.0", form_data['alamat'])
+            
+            # Kelurahan
+            self.entries["kelurahan"].delete(0, "end")
+            if form_data.get('kelurahan'):
+                self.entries["kelurahan"].insert(0, form_data['kelurahan'])
+            
+            # Kecamatan
+            self.entries["kecamatan"].delete(0, "end")
+            if form_data.get('kecamatan'):
+                self.entries["kecamatan"].insert(0, form_data['kecamatan'])
+            
+            # Kabupaten
+            self.entries["kabupaten"].delete(0, "end")
+            if form_data.get('kabupaten'):
+                self.entries["kabupaten"].insert(0, form_data['kabupaten'])
+            
+            # Provinsi
+            self.entries["provinsi"].delete(0, "end")
+            if form_data.get('provinsi'):
+                self.entries["provinsi"].insert(0, form_data['provinsi'])
+            
+            # Telepon
+            self.entries["telepon"].delete(0, "end")
+            if form_data.get('telepon'):
+                self.entries["telepon"].insert(0, form_data['telepon'])
+            
+            # Pendidikan
+            if form_data.get('pendidikan'):
+                self.entries["pendidikan"].set(form_data['pendidikan'])
+            
+            # Instansi
+            self.entries["instansi"].delete(0, "end")
+            if form_data.get('instansi'):
+                self.entries["instansi"].insert(0, form_data['instansi'])
+                
+        except Exception as e:
+            print(f"[INPUT] Error loading form data: {e}")
+
+    def clear_saved_state(self):
+        """
+        Clear saved state - dipanggil setelah save sukses
+        """
+        session.clear('input_peserta_state')
+        print("[INPUT] Saved state cleared")        
