@@ -5,6 +5,7 @@ import customtkinter as ctk
 from pages.dashboard import DashboardPage
 from pages.peserta import PesertaPage
 from pages.inputpeserta import InputPesertaPage
+from pages.pdf2image import Pdf2ImagePage 
 from pages.projects import ProjectsPage
 from pages.settings import SettingsPage
 from services.database import init_db
@@ -69,6 +70,7 @@ class App(ctk.CTk):
             ("🏠", "Dashboard"),
             ("👥", "Peserta"),
             ("➕", "Input Peserta"),
+            ("📄", "PDF2Image"),
             ("📊", "Projects"),
             ("⚙️", "Settings"),
         ]
@@ -170,6 +172,10 @@ class App(ctk.CTk):
             page = PesertaPage(self.content_container, self)
         elif page_name == "Input Peserta":
             page = InputPesertaPage(self.content_container, id_sertifikasi)
+        elif page_name == "PDF2Image": 
+            page = Pdf2ImagePage(self.content_container)
+            if hasattr(page, 'restore_state'):
+                page.restore_state()
         elif page_name == "Projects":
             page = ProjectsPage(self.content_container)
         elif page_name == "Settings":
