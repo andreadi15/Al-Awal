@@ -763,7 +763,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
         if error > 0:
             message += f"❌ Failed: {error}\n"
         
-        messagebox.showinfo("Completed", message)
+        # messagebox.showinfo("Completed", message)
     
     # ==========================================
     # UTILITY METHODS

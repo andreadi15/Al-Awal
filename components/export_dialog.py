@@ -428,6 +428,9 @@ class ExportDialog(ctk.CTkToplevel):
         # Auto hide and show export button after 4 seconds
         # self.after(4000, self.hide_success_message)
 
+    def show_error(self, msg):
+        messagebox.showerror("Error", f"Gagal ekspor:\n{msg}")
+        
     def hide_success_message(self):
         """Hide success message and restore export button"""
         self.success_frame.pack_forget()
@@ -482,6 +485,8 @@ class ExportDialog(ctk.CTkToplevel):
     def export_rekap_bnsp(self):
         """Export Rekap BNSP format"""
         def export_thread():
+            import pythoncom
+            pythoncom.CoInitialize()
             try:
                 # Update progress
                 self.after(0, lambda: self.update_progress(0.2))
@@ -494,7 +499,7 @@ class ExportDialog(ctk.CTkToplevel):
                         'no': i,
                         'tuk': NAMA_PERUSAHAAN,
                         'tempat': LOKASI_PERUSAHAAN,
-                        'hari': get_text_hari(),
+                        'hari': get_text_hari(tanggal_pelatihan),
                         'tanggal': tanggal_pelatihan.replace("-","/"), 
                         'nama_peserta': peserta.nama,
                         'skema': peserta.skema,
@@ -534,7 +539,10 @@ class ExportDialog(ctk.CTkToplevel):
                     
             except Exception as e:
                 self.after(0, self.reset_progress)
-                self.after(100, lambda: messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}"))
+                self.after(100, self.show_error, str(e))
+            finally:
+                pythoncom.CoUninitialize()
+        
         
         # Run in background thread
         thread = threading.Thread(target=export_thread, daemon=True)
@@ -543,13 +551,14 @@ class ExportDialog(ctk.CTkToplevel):
     def export_awl_report(self):
         """Export AWL Report format"""
         def export_thread():
+            import pythoncom
+            pythoncom.CoInitialize()
             try:
                 self.after(0, lambda: self.update_progress(0.2))
                 
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 data_peserta = []
                 for i, peserta in enumerate(self.peserta_list, start=1):
-                    print(peserta.nama)
                     data_peserta.append({
                         'no': i,
                         'nama_peserta': peserta.nama,
@@ -581,7 +590,9 @@ class ExportDialog(ctk.CTkToplevel):
                     
             except Exception as e:
                 self.after(0, self.reset_progress)
-                self.after(100, lambda: messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}"))
+                self.after(100, self.show_error, str(e))
+            finally:
+                pythoncom.CoUninitialize()
         
         thread = threading.Thread(target=export_thread, daemon=True)
         thread.start()

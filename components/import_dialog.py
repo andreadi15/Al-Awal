@@ -468,7 +468,7 @@ class ImportDialog(ctk.CTkToplevel):
                         provinsi=parsed_address['provinsi'],
                         telepon=cols[6].replace("-", "").strip(), 
                         pendidikan=cols[7].strip(),        
-                        instansi=""                        
+                        instansi=cols[8].strip()                        
                     )
                     
                     self.parsed_data.append({
