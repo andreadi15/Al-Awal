@@ -248,7 +248,6 @@ class Pdf2ImagePage(ctk.CTkFrame):
         if added_count > 0:
             self.refresh_file_list()
             self.update_footer_visibility()
-            messagebox.showinfo("Success", f"Added {added_count} PDF file(s)")
     
     def toggle_folder_setting(self):
         """Toggle folder creation setting"""
@@ -288,12 +287,20 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         # Show empty state or file rows
         if not self.pdf_files:
-            self.empty_state.pack(fill="both", expand=True, pady=50)
+            # Show empty state
+            try:
+                if self.empty_state.winfo_exists():
+                    self.empty_state.pack(fill="both", expand=True, pady=50)
+            except:
+                pass
             self.clear_all_btn.pack_forget()
         else:
             # Hide empty state
-            if self.empty_state.winfo_ismapped():
-                self.empty_state.pack_forget()
+            try:
+                if self.empty_state.winfo_exists():
+                    self.empty_state.pack_forget()
+            except:
+                pass
             
             # Show clear all button
             self.clear_all_btn.pack(side="right", padx=20, pady=17)
