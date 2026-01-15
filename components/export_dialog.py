@@ -5,7 +5,7 @@ import customtkinter as ctk
 from tkinter import messagebox, filedialog
 from services.export_excel import export_Excel
 from services.export_dok_bnsp import export_Dok_BNSP
-from config import NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN,TEMPLATE_AWL_REPORT,TEMPLATE_REKAP_BNSP
+from config import BASE_DIR,NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN,TEMPLATE_AWL_REPORT,TEMPLATE_REKAP_BNSP
 from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
 import os, threading
 
@@ -519,7 +519,7 @@ class ExportDialog(ctk.CTkToplevel):
                 self.after(0, lambda: self.update_progress(0.5))
                 
                 # Export data
-                exporter = export_Excel(TEMPLATE_REKAP_BNSP)
+                exporter = export_Excel(os.path.join(BASE_DIR, TEMPLATE_REKAP_BNSP))
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
                 # Update progress
@@ -549,6 +549,7 @@ class ExportDialog(ctk.CTkToplevel):
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 data_peserta = []
                 for i, peserta in enumerate(self.peserta_list, start=1):
+                    print(peserta.nama)
                     data_peserta.append({
                         'no': i,
                         'nama_peserta': peserta.nama,
@@ -567,7 +568,7 @@ class ExportDialog(ctk.CTkToplevel):
                 self.after(0, lambda: self.update_progress(0.5))
                 
                 # Export data
-                exporter = export_Excel(TEMPLATE_AWL_REPORT)
+                exporter = export_Excel(os.path.join(BASE_DIR, TEMPLATE_AWL_REPORT))
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
                 self.after(0, lambda: self.update_progress(1.0))
