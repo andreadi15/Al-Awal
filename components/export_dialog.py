@@ -384,7 +384,7 @@ class ExportDialog(ctk.CTkToplevel):
         """Hide progress bar container"""
         if self.is_exporting:
             self.is_exporting = False
-            self.progress_container.pack_forget()
+            self.progress_frame.pack_forget()
             self.export_btn.pack(side="right", padx=20)
             self.update_idletasks()
 

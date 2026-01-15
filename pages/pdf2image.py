@@ -225,29 +225,40 @@ class Pdf2ImagePage(ctk.CTkFrame):
         if not file_paths:
             return
         
-        # Add files (skip duplicates)
-        added_count = 0
-        for path in file_paths:
-            # Check duplicate
-            if any(pdf.file_path == path for pdf in self.pdf_files):
-                continue
-            
-            # Create model and get info
-            pdf_model = PdfFileModel(path)
-            processor = PdfProcessor()
-            total_pages = processor.get_pdf_info(path)
-            
-            if total_pages == 0:
-                messagebox.showerror("Error", f"Failed to read PDF: {os.path.basename(path)}")
-                continue
-            
-            pdf_model.total_pages = total_pages
-            self.pdf_files.append(pdf_model)
-            added_count += 1
+        # Show loading indicator
+        self.update_idletasks()
         
-        if added_count > 0:
-            self.refresh_file_list()
-            self.update_footer_visibility()
+        def _load_files():
+            added_count = 0
+            for path in file_paths:
+                # Check duplicate
+                if any(pdf.file_path == path for pdf in self.pdf_files):
+                    continue
+                
+                # Create model and get info
+                pdf_model = PdfFileModel(path)
+                processor = PdfProcessor()
+                total_pages = processor.get_pdf_info(path)
+                
+                if total_pages == 0:
+                    self.after(0, lambda p=path: messagebox.showerror(
+                        "Error", 
+                        f"Failed to read PDF: {os.path.basename(p)}"
+                    ))
+                    continue
+                
+                pdf_model.total_pages = total_pages
+                self.pdf_files.append(pdf_model)
+                added_count += 1
+            
+            # Update UI in main thread
+            if added_count > 0:
+                self.after(0, lambda: self.refresh_file_list())
+                self.after(0, lambda: self.update_footer_visibility())
+        
+        # Run in thread
+        import threading
+        threading.Thread(target=_load_files, daemon=True).start()
     
     def toggle_folder_setting(self):
         """Toggle folder creation setting"""
@@ -489,19 +500,20 @@ class Pdf2ImagePage(ctk.CTkFrame):
             progress = (current_page / total_pages) * 100
             pdf_model.update_progress(current_page)
             
-            self.after(0, lambda: self._update_row_progress(index, progress, current_page, total_pages))
+            self.after(0, lambda idx=index, prog=progress, curr=current_page, tot=total_pages: 
+                self._update_row_progress(idx, prog, curr, tot))
         
         def on_complete(success, message):
             if success:
                 pdf_model.set_completed()
-                self.after(0, lambda: self._on_file_completed(index, success=True))
+                self.after(0, lambda idx=index: self._on_file_completed(idx, success=True))
             else:
                 if "Paused" in message:
                     pdf_model.status = "paused"
-                    self.after(0, lambda: self._on_file_paused(index))
+                    self.after(0, lambda idx=index: self._on_file_paused(idx))
                 else:
                     pdf_model.set_error(message)
-                    self.after(0, lambda: self._on_file_error(index, message))
+                    self.after(0, lambda idx=index, msg=message: self._on_file_error(idx, msg))
         
         # Start processing
         pdf_model.status = "processing"
@@ -615,21 +627,20 @@ class Pdf2ImagePage(ctk.CTkFrame):
             pdf_model = self.pdf_files[file_index]
             pdf_model.update_progress(current_page)
             
-            self.after(0, lambda: self._update_row_progress(
-                file_index, progress, current_page, total_pages
-            ))
+            self.after(0, lambda idx=file_index, prog=progress, curr=current_page, tot=total_pages: 
+            self._update_row_progress(idx, prog, curr, tot))
         
         def on_global_progress(completed_files, total_files):
             """Update global progress bar"""
             progress = (completed_files / total_files) * 100
             
-            self.after(0, lambda: self._update_global_progress(
-                completed_files, total_files, progress
-            ))
+            self.after(0, lambda comp=completed_files, tot=total_files, prog=progress: 
+               self._update_global_progress(comp, tot, prog))
         
         def on_all_complete(success_count, total_count):
             """Handle all files completed"""
-            self.after(0, lambda: self._on_batch_completed(success_count, total_count))
+            self.after(0, lambda succ=success_count, tot=total_count: 
+               self._on_batch_completed(succ, tot))
         
         # Start batch processing
         self.batch_processor.process_all(
@@ -699,7 +710,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
             text="⏸️ Pause",
             fg_color="#ff9800",
             state="normal",
-            command=lambda: self.pause_single_file(index)
+            command=lambda idx=index: self.pause_single_file(idx)
         )
     
     def _update_global_progress(self, completed: int, total: int, progress: float):
