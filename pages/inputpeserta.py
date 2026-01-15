@@ -1078,7 +1078,7 @@ class InputPesertaPage(ctk.CTkFrame):
                 self.current_index = state.get('current_index', 0)
                 
                 # Restore current form data
-                current_form = state.get('current_form_data', {})
+                current_form =  PesertaModel.from_dict(state.get('current_form_data', {}))
                 if current_form:
                     self.load_form(current_form)
                     print(f"[INPUT] Restored form data at index {self.current_index}")
