@@ -301,7 +301,7 @@ class ExportDialog(ctk.CTkToplevel):
             row_frame.grid_columnconfigure(0, weight=0, minsize=50)
             row_frame.grid_columnconfigure(1, weight=1, minsize=180)
             row_frame.grid_columnconfigure(2, weight=1, minsize=200)
-            row_frame.grid_columnconfigure(3, weight=1, minsize=100)
+            row_frame.grid_columnconfigure(3, weight=1, minsize=200)
             row_frame.grid_columnconfigure(4, weight=0, minsize=100)
             
             # Column 0: No
@@ -341,7 +341,7 @@ class ExportDialog(ctk.CTkToplevel):
             # Progress bar (hidden initially)
             progress_bar = ctk.CTkProgressBar(
                 progress_container,
-                width=200,
+                width=282,
                 height=15,
                 corner_radius=5,
                 fg_color="#444444",
@@ -406,7 +406,7 @@ class ExportDialog(ctk.CTkToplevel):
             filename = os.path.basename(file_path)
             
             # ✅ TAMBAH: Truncate filename jika terlalu panjang
-            max_length = 18  # Adjust sesuai kebutuhan
+            max_length = 16  # Adjust sesuai kebutuhan
             if len(filename) > max_length:
                 # Pisahkan nama dan ekstensi
                 name, ext = os.path.splitext(filename)
@@ -437,8 +437,10 @@ class ExportDialog(ctk.CTkToplevel):
             return
         
         # Update UI
+        row_frame = self.peserta_rows[peserta.id_peserta]
+        row_frame.grid_columnconfigure(3, weight=0, minsize=200)
         peserta._status_label.destroy()
-        peserta._progress_bar.pack(side="right", padx=(0, 5))
+        peserta._progress_bar.pack(side="right", padx=(8, 5))
         peserta._run_btn.configure(state="disabled", fg_color="#666666")
         peserta._status = "processing"
         
