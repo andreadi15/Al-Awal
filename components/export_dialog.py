@@ -401,9 +401,21 @@ class ExportDialog(ctk.CTkToplevel):
             # Store file path
             self.selected_files[peserta.id_peserta] = file_path
             
-            # Update label
+            # Update label with truncated filename
             filename = os.path.basename(file_path)
-            path_label.configure(text=filename, text_color="#4caf50")
+            
+            # ✅ TAMBAH: Truncate filename jika terlalu panjang
+            max_length = 25  # Adjust sesuai kebutuhan
+            if len(filename) > max_length:
+                # Pisahkan nama dan ekstensi
+                name, ext = os.path.splitext(filename)
+                # Truncate name, keep extension
+                truncated = name[:max_length - len(ext) - 3] + "..." + ext
+                display_name = truncated
+            else:
+                display_name = filename
+            
+            path_label.configure(text=display_name, text_color="#4caf50")
     
     def run_single_peserta(self, peserta, numbering):
         """Run export for single peserta"""
