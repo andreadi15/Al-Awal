@@ -4,7 +4,7 @@
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
 from services.export_excel import export_Excel
-from services.export_dok_bnsp import export_Dok_BNSP
+from services.export_dok_bnsp import DokBNSPBatchProcessor, DokBNSPSingleProcessor
 from config import BASE_DIR,NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN,TEMPLATE_AWL_REPORT,TEMPLATE_REKAP_BNSP
 from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
 import os, threading, queue  

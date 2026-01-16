@@ -39,3 +39,4 @@ template.OPERATOR MENARA BOR = dok_a_omb.doc, dok_b_omb.doc
 template.OPERATOR GAS TESTER MIGAS = dok_a_gastester.docx, dok_b_c_gastester.docx
 template.PENGELASAN PIPA - 6G = dok_a_welder_6g.doc
 
+
