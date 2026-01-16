@@ -341,13 +341,13 @@ class ExportDialog(ctk.CTkToplevel):
             # Progress bar (hidden initially)
             progress_bar = ctk.CTkProgressBar(
                 progress_container,
-                width=100,
+                width=200,
                 height=15,
                 corner_radius=5,
                 fg_color="#444444",
                 progress_color="#4caf50"
             )
-            progress_bar.pack(side="left", padx=(0, 5))
+            progress_bar.pack(side="right", padx=(0, 5))
             progress_bar.set(0)
             progress_bar.pack_forget()  # Hide initially
             
@@ -437,8 +437,8 @@ class ExportDialog(ctk.CTkToplevel):
             return
         
         # Update UI
-        peserta._status_label.pack_forget()
-        peserta._progress_bar.pack(fill="x", expand=True)
+        peserta._status_label.destroy()
+        peserta._progress_bar.pack(side="right", padx=(0, 5))
         peserta._run_btn.configure(state="disabled", fg_color="#666666")
         peserta._status = "processing"
         
