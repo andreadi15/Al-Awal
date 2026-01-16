@@ -301,7 +301,7 @@ class ExportDialog(ctk.CTkToplevel):
             row_frame.grid_columnconfigure(0, weight=0, minsize=50)
             row_frame.grid_columnconfigure(1, weight=1, minsize=180)
             row_frame.grid_columnconfigure(2, weight=1, minsize=200)
-            row_frame.grid_columnconfigure(3, weight=1, minsize=200)
+            row_frame.grid_columnconfigure(3, weight=1, minsize=100)
             row_frame.grid_columnconfigure(4, weight=0, minsize=100)
             
             # Column 0: No
@@ -341,12 +341,13 @@ class ExportDialog(ctk.CTkToplevel):
             # Progress bar (hidden initially)
             progress_bar = ctk.CTkProgressBar(
                 progress_container,
+                width=100,
                 height=15,
                 corner_radius=5,
                 fg_color="#444444",
                 progress_color="#4caf50"
             )
-            progress_bar.pack(fill="x", expand=True)
+            progress_bar.pack(side="left", padx=(0, 5))
             progress_bar.set(0)
             progress_bar.pack_forget()  # Hide initially
             
@@ -405,7 +406,7 @@ class ExportDialog(ctk.CTkToplevel):
             filename = os.path.basename(file_path)
             
             # ✅ TAMBAH: Truncate filename jika terlalu panjang
-            max_length = 25  # Adjust sesuai kebutuhan
+            max_length = 18  # Adjust sesuai kebutuhan
             if len(filename) > max_length:
                 # Pisahkan nama dan ekstensi
                 name, ext = os.path.splitext(filename)
