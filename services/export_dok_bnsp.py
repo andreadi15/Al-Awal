@@ -27,7 +27,7 @@ class export_Dok_BNSP:
             print("Installing required library (pywin32)...")
             import subprocess
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pywin32"])
-            print("Installation complete.")
+            print("Installation complete.") 
 
     def export_dokumen(self, tanggal_pelatihan, peserta_list, ttd_path, output_folder, progress_callback=None):
         """

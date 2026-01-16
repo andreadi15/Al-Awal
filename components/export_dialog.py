@@ -7,7 +7,7 @@ from services.export_excel import export_Excel
 from services.export_dok_bnsp import export_Dok_BNSP
 from config import BASE_DIR,NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN,TEMPLATE_AWL_REPORT,TEMPLATE_REKAP_BNSP
 from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
-import os, threading
+import os, threading, queue  
 
 class ExportDialog(ctk.CTkToplevel):
     def __init__(self, parent, peserta_list, sertifikasi_info, callback):
@@ -22,6 +22,10 @@ class ExportDialog(ctk.CTkToplevel):
         self.progress_value = 0
         self.progress_label_text = ""
         self.is_exporting = False
+        
+        self.individual_processors = {}  
+        self.peserta_rows = {} 
+        self.progress_queue = queue.Queue()
 
         # Window setup
         self.title("📤 Ekspor Data Peserta")
@@ -36,6 +40,7 @@ class ExportDialog(ctk.CTkToplevel):
         self.center_window()
         
         self.create_widgets()
+        self._process_queue()
         
     def center_window(self):
         self.update_idletasks()
@@ -162,6 +167,34 @@ class ExportDialog(ctk.CTkToplevel):
         # Load initial format
         self.on_format_changed("Rekap BNSP")
     
+    def _process_queue(self):
+        """Process updates from worker threads"""
+        try:
+            while True:
+                try:
+                    update = self.progress_queue.get_nowait()
+                    
+                    # Execute update based on type
+                    if update['type'] == 'row_progress':
+                        self._update_row_progress(
+                            update['peserta_id'],
+                            update['progress']
+                        )
+                    elif update['type'] == 'row_completed':
+                        self._on_row_completed(update['peserta_id'])
+                    elif update['type'] == 'row_error':
+                        self._on_row_error(update['peserta_id'], update['message'])
+                    elif update['type'] == 'global_progress':
+                        self.update_progress(update['value'])
+                    
+                except queue.Empty:
+                    break
+        except:
+            pass
+        
+        # Schedule next check (every 50ms)
+        self.after(50, self._process_queue)
+        
     def on_format_changed(self, selected_format):
         """Handle format change"""
         self.reset_ui_state()
@@ -242,21 +275,23 @@ class ExportDialog(ctk.CTkToplevel):
             ctk.CTkLabel(row_frame, text=peserta.nama, font=("Arial", 11)).grid(row=0, column=1, padx=10, pady=5, sticky="w")
     
     def render_dokumen_bnsp(self):
-        """Render format Dokumen BNSP"""
+        """Render format Dokumen BNSP dengan individual run button"""
         # Header
         header_frame = ctk.CTkFrame(self.content_container, fg_color="#333333", height=40)
         header_frame.pack(fill="x", pady=(0, 5))
         header_frame.pack_propagate(False)
         
-        header_frame.grid_columnconfigure(0, weight=0, minsize=50)
-        header_frame.grid_columnconfigure(1, weight=1, minsize=200)
-        # header_frame.grid_columnconfigure(2, weight=0, minsize=120)
-        header_frame.grid_columnconfigure(2, weight=1, minsize=300)
+        header_frame.grid_columnconfigure(0, weight=0, minsize=50)   # No
+        header_frame.grid_columnconfigure(1, weight=1, minsize=180)  # Nama
+        header_frame.grid_columnconfigure(2, weight=1, minsize=200)  # File TTD
+        header_frame.grid_columnconfigure(3, weight=1, minsize=200)  # Progress
+        header_frame.grid_columnconfigure(4, weight=0, minsize=100)  # Run Button
         
         ctk.CTkLabel(header_frame, text="No", font=("Arial", 12, "bold")).grid(row=0, column=0, padx=10, sticky="w")
         ctk.CTkLabel(header_frame, text="Nama", font=("Arial", 12, "bold")).grid(row=0, column=1, padx=10, sticky="w")
-        # ctk.CTkLabel(header_frame, text="Jenis Kelamin", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=10, sticky="w")
         ctk.CTkLabel(header_frame, text="File TTD", font=("Arial", 12, "bold")).grid(row=0, column=2, padx=10, sticky="w")
+        ctk.CTkLabel(header_frame, text="Progress", font=("Arial", 12, "bold")).grid(row=0, column=3, padx=10, sticky="w")
+        ctk.CTkLabel(header_frame, text="Action", font=("Arial", 12, "bold")).grid(row=0, column=4, padx=10, sticky="w")
         
         # Rows
         for i, peserta in enumerate(self.peserta_list, start=1):
@@ -264,28 +299,21 @@ class ExportDialog(ctk.CTkToplevel):
             row_frame.pack(fill="x", pady=2)
             
             row_frame.grid_columnconfigure(0, weight=0, minsize=50)
-            row_frame.grid_columnconfigure(1, weight=1, minsize=200)
-            # row_frame.grid_columnconfigure(2, weight=0, minsize=120)
-            row_frame.grid_columnconfigure(2, weight=1, minsize=300)
+            row_frame.grid_columnconfigure(1, weight=1, minsize=180)
+            row_frame.grid_columnconfigure(2, weight=1, minsize=200)
+            row_frame.grid_columnconfigure(3, weight=1, minsize=200)
+            row_frame.grid_columnconfigure(4, weight=0, minsize=100)
             
+            # Column 0: No
             ctk.CTkLabel(row_frame, text=str(i), font=("Arial", 11)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
-            ctk.CTkLabel(row_frame, text=peserta.nama, font=("Arial", 11)).grid(row=0, column=1, padx=10, pady=5, sticky="w")
             
-            # gender_combo = ctk.CTkComboBox(
-            #     row_frame,
-            #     values=["Laki-laki", "Perempuan"],
-            #     width=110,
-            #     height=30,
-            #     state="readonly"
-            # )
-            # gender_combo.set("Laki-laki")
-            # gender_combo.grid(row=0, column=2, padx=10, pady=5)
+            # Column 1: Nama
+            ctk.CTkLabel(row_frame, text=peserta.nama[:25] + "..." if len(peserta.nama) > 25 else peserta.nama, font=("Arial", 11)).grid(row=0, column=1, padx=10, pady=5, sticky="w")
             
-            # File selector container
+            # Column 2: File TTD selector
             file_container = ctk.CTkFrame(row_frame, fg_color="transparent")
             file_container.grid(row=0, column=2, padx=10, pady=5, sticky="ew")
             
-            # Path label (scrollable)
             path_label = ctk.CTkLabel(
                 file_container,
                 text="Belum dipilih",
@@ -295,11 +323,10 @@ class ExportDialog(ctk.CTkToplevel):
             )
             path_label.pack(side="left", fill="x", expand=True, padx=(0, 5))
             
-            # Browse button
             browse_btn = ctk.CTkButton(
                 file_container,
-                text="📁 TTD",
-                width=70,
+                text="📁",
+                width=50,
                 height=30,
                 fg_color="#1a73e8",
                 hover_color="#1557b0",
@@ -307,9 +334,54 @@ class ExportDialog(ctk.CTkToplevel):
             )
             browse_btn.pack(side="right")
             
+            # Column 3: Progress container
+            progress_container = ctk.CTkFrame(row_frame, fg_color="transparent")
+            progress_container.grid(row=0, column=3, padx=10, pady=5, sticky="ew")
+            
+            # Progress bar (hidden initially)
+            progress_bar = ctk.CTkProgressBar(
+                progress_container,
+                height=15,
+                corner_radius=5,
+                fg_color="#444444",
+                progress_color="#4caf50"
+            )
+            progress_bar.pack(fill="x", expand=True)
+            progress_bar.set(0)
+            progress_bar.pack_forget()  # Hide initially
+            
+            # Status label (shown initially)
+            status_label = ctk.CTkLabel(
+                progress_container,
+                text="Ready",
+                font=("Arial", 10),
+                text_color="#888888"
+            )
+            status_label.pack(fill="x", expand=True)
+            
+            # Column 4: Run button
+            run_btn = ctk.CTkButton(
+                row_frame,
+                text="▶️",
+                width=70,
+                height=30,
+                font=("Arial", 12, "bold"),
+                fg_color="#34a853",
+                hover_color="#2d8e47",
+                corner_radius=6,
+                command=lambda p=peserta, idx=i: self.run_single_peserta(p, idx)
+            )
+            run_btn.grid(row=0, column=4, padx=10, pady=5)
+            
             # Store references
-            # peserta._gender_widget = gender_combo
             peserta._path_label = path_label
+            peserta._progress_bar = progress_bar
+            peserta._status_label = status_label
+            peserta._run_btn = run_btn
+            peserta._status = "idle"  # idle | processing | completed | error
+            
+            # Store row widget
+            self.peserta_rows[peserta.id_peserta] = row_frame
     
     def browse_file(self, peserta, path_label):
         """Open file chooser for TTD file"""
@@ -333,6 +405,108 @@ class ExportDialog(ctk.CTkToplevel):
             filename = os.path.basename(file_path)
             path_label.configure(text=filename, text_color="#4caf50")
     
+    def run_single_peserta(self, peserta, numbering):
+        """Run export for single peserta"""
+        # Validation
+        if peserta.id_peserta not in self.selected_files:
+            messagebox.showwarning("File TTD Belum Dipilih", f"Pilih file TTD untuk {peserta.nama} terlebih dahulu!")
+            return
+        
+        # Check data completeness
+        for key, value in peserta.__dict__.items():
+            if key != "instansi" and (value is None or value == ""):
+                messagebox.showwarning("Data Belum Lengkap", f"Data {peserta.nama} belum lengkap!")
+                return
+        
+        # Check if already processing
+        if peserta._status == "processing":
+            messagebox.showinfo("Info", "Peserta sedang diproses!")
+            return
+        
+        # Update UI
+        peserta._status_label.pack_forget()
+        peserta._progress_bar.pack(fill="x", expand=True)
+        peserta._run_btn.configure(state="disabled", fg_color="#666666")
+        peserta._status = "processing"
+        
+        # Start processing in thread
+        def export_thread():
+            try:
+                tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
+                DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+                OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
+                
+                # Export single peserta
+                exporter = export_Dok_BNSP()
+                
+                def on_progress(current, total):
+                    progress = current / total
+                    self.progress_queue.put({
+                        'type': 'row_progress',
+                        'peserta_id': peserta.id_peserta,
+                        'progress': progress
+                    })
+                
+                success = exporter.export_dokumen(
+                    tanggal_pelatihan,
+                    [peserta],  # Single peserta
+                    {peserta.id_peserta: self.selected_files[peserta.id_peserta]},
+                    OUTPUT_PATH,
+                    progress_callback=on_progress
+                )
+                
+                if success:
+                    self.progress_queue.put({
+                        'type': 'row_completed',
+                        'peserta_id': peserta.id_peserta
+                    })
+                else:
+                    self.progress_queue.put({
+                        'type': 'row_error',
+                        'peserta_id': peserta.id_peserta,
+                        'message': "Export failed"
+                    })
+                    
+            except Exception as e:
+                self.progress_queue.put({
+                    'type': 'row_error',
+                    'peserta_id': peserta.id_peserta,
+                    'message': str(e)
+                })
+        
+        # Run in background thread
+        threading.Thread(target=export_thread, daemon=True).start()
+    
+    def _update_row_progress(self, peserta_id, progress):
+        """Update individual row progress"""
+        for peserta in self.peserta_list:
+            if peserta.id_peserta == peserta_id:
+                peserta._progress_bar.set(progress)
+                break
+
+    def _on_row_completed(self, peserta_id):
+        """Handle row completion"""
+        for peserta in self.peserta_list:
+            if peserta.id_peserta == peserta_id:
+                peserta._progress_bar.configure(progress_color="#4caf50")
+                peserta._progress_bar.set(1.0)
+                peserta._status_label.configure(text="✓ Done", text_color="#4caf50")
+                peserta._run_btn.configure(text="✓", fg_color="#4caf50", state="disabled")
+                peserta._status = "completed"
+                break
+
+    def _on_row_error(self, peserta_id, message):
+        """Handle row error"""
+        for peserta in self.peserta_list:
+            if peserta.id_peserta == peserta_id:
+                peserta._progress_bar.configure(progress_color="#d32f2f")
+                peserta._status_label.configure(text=f"❌ {message[:20]}", text_color="#d32f2f")
+                peserta._status_label.pack(fill="x", expand=True)
+                peserta._progress_bar.pack_forget()
+                peserta._run_btn.configure(state="normal", fg_color="#34a853")
+                peserta._status = "error"
+                break
+            
     def do_export(self):
         """Execute export based on selected format"""
         selected_format = self.format_combo.get()
