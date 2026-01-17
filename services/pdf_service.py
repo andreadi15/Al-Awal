@@ -99,7 +99,6 @@ class PdfProcessor:
                     output_path = os.path.join(output_dir, output_filename)
                     pix.save(output_path)
                     
-                    # Update progress
                     progress_callback(page_num + 1, total_pages)
                 
                 doc.close()
