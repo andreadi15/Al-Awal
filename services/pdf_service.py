@@ -109,7 +109,6 @@ class PdfProcessor:
                 error_msg = f"Error: {str(e)}"
                 completion_callback(False, error_msg)
         
-        # Run in thread
         self.is_running = True
         self.is_paused = False
         self.current_thread = threading.Thread(target=_process, daemon=True)
