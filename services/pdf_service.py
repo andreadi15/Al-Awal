@@ -192,11 +192,9 @@ class PdfBatchProcessor:
                 # Process next file
                 _process_next(index + 1)
             
-            # Start processing this file
             pdf_model.status = "processing"
             processor.process_pdf(pdf_model, make_folder, on_progress, on_complete)
         
-        # Start batch processing
         self.is_running = True
         self.is_paused = False
         self.current_index = 0
