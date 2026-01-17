@@ -189,7 +189,6 @@ class PdfBatchProcessor:
                 completed = sum(1 for p in pdf_models[:index+1] if p.status in ["completed", "paused", "error"])
                 global_progress_callback(completed, len(pdf_models))
                 
-                # Process next file
                 _process_next(index + 1)
             
             pdf_model.status = "processing"
