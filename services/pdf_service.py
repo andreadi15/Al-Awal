@@ -185,7 +185,6 @@ class PdfBatchProcessor:
                     else:
                         pdf_model.set_error(message)
                 
-                # Update global progress
                 completed = sum(1 for p in pdf_models[:index+1] if p.status in ["completed", "paused", "error"])
                 global_progress_callback(completed, len(pdf_models))
                 
