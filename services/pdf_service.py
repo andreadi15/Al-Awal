@@ -163,7 +163,6 @@ class PdfBatchProcessor:
         
         def _process_next(index: int):
             if index >= len(pdf_models) or self.is_paused:
-                # All done or paused
                 success_count = sum(1 for p in pdf_models if p.status == "completed")
                 completion_callback(success_count, len(pdf_models))
                 self.is_running = False
