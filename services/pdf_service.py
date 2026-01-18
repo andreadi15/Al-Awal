@@ -90,7 +90,6 @@ class PdfProcessor:
                         completion_callback(False, "Paused by user")
                         return
                     
-                    # Load and convert page
                     page = doc.load_page(page_num)
                     pix = page.get_pixmap(dpi=200)
                     
