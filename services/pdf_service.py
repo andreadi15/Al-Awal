@@ -84,7 +84,6 @@ class PdfProcessor:
                 
                 # Process each page
                 for page_num in range(total_pages):
-                    # Check if paused
                     if self.is_paused:
                         doc.close()
                         completion_callback(False, "Paused by user")
