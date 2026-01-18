@@ -94,7 +94,6 @@ class PdfProcessor:
                     page = doc.load_page(page_num)
                     pix = page.get_pixmap(dpi=200)
                     
-                    # Save image
                     output_filename = f"{base_name} - page {page_num + 1}.jpg"
                     output_path = os.path.join(output_dir, output_filename)
                     pix.save(output_path)
