@@ -70,7 +70,6 @@ class PdfProcessor:
                 base_name = os.path.basename(pdf_path).replace(".pdf", "")
                 pdf_dir = os.path.dirname(pdf_path)
                 
-                # Determine output directory
                 if make_folder:
                     output_dir = os.path.join(pdf_dir, base_name)
                     os.makedirs(output_dir, exist_ok=True)
