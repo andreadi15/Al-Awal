@@ -82,7 +82,6 @@ class PdfProcessor:
                 total_pages = len(doc)
                 pdf_model.total_pages = total_pages
                 
-                # Process each page
                 for page_num in range(total_pages):
                     if self.is_paused:
                         doc.close()
