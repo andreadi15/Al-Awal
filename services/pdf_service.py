@@ -77,7 +77,6 @@ class PdfProcessor:
                 else:
                     output_dir = pdf_dir
                 
-                # Open PDF
                 doc = fitz.open(pdf_path)
                 total_pages = len(doc)
                 pdf_model.total_pages = total_pages
