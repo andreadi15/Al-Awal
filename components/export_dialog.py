@@ -465,7 +465,7 @@ class ExportDialog(ctk.CTkToplevel):
                 success = exporter.process(
                     index,
                     tanggal_pelatihan,
-                    peserta,  # Single peserta
+                    peserta,  
                     self.selected_files[peserta.id_peserta],
                     OUTPUT_PATH,
                     progress_callback=update_progress
@@ -497,7 +497,9 @@ class ExportDialog(ctk.CTkToplevel):
         """Update individual row progress"""
         for peserta in self.peserta_list:
             if peserta.id_peserta == peserta_id:
+                peserta._progress_bar.configure(progress_color="#0017c2")
                 peserta._progress_bar.set(value)
+                peserta._status_label.configure(text="✓ Done", text_color="#0017c2")
                 break
 
     def _on_row_completed(self, peserta_id):
@@ -602,7 +604,7 @@ class ExportDialog(ctk.CTkToplevel):
         
         self.update_idletasks()
         
-    def show_success(self, output_path):
+    def show_success(self):
         """Show success message in center"""
         # Hide progress
         self.progress_frame.pack_forget()
@@ -625,13 +627,13 @@ class ExportDialog(ctk.CTkToplevel):
     def show_error(self, msg):
         messagebox.showerror("Error", f"Gagal ekspor:\n{msg}")
         
-    def hide_success_message(self):
-        """Hide success message and restore export button"""
-        self.success_frame.pack_forget()
-        self.export_btn.pack(side="right", padx=20)
-        self.is_exporting = False
-        self.reset_progress()
-        self.reset_ui_state()
+    # def hide_success_message(self):
+    #     """Hide success message and restore export button"""
+    #     self.success_frame.pack_forget()
+    #     self.export_btn.pack(side="right", padx=20)
+    #     self.is_exporting = False
+    #     self.reset_progress()
+    #     self.reset_ui_state()
         
     def update_global_progress(self, value, show_status=True):
         """
@@ -726,7 +728,7 @@ class ExportDialog(ctk.CTkToplevel):
                 
                 # Show result in main thread
                 if success:
-                    self.after(300, lambda: self.show_success(OUTPUT_PATH))
+                    self.after(300, lambda: self.show_success())
                 else:
                     self.after(0, self.reset_progress)
                     self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
@@ -777,7 +779,7 @@ class ExportDialog(ctk.CTkToplevel):
                 self.after(0, lambda: self.update_progress(1.0))
                 
                 if success:
-                    self.after(300, lambda: self.show_success(OUTPUT_PATH))
+                    self.after(300, lambda: self.show_success())
                 else:
                     self.after(0, self.reset_progress)
                     self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
