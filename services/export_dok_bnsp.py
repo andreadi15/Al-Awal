@@ -1,4 +1,4 @@
-import os
+import os, logging
 from config import BASE_DIR, TEMPLATE_BASE, TEMPLATE_DOK_BNSP
 from models.peserta_model import PesertaModel
 from services.logic import format_kabupaten, format_tanggal_to_general
@@ -44,7 +44,8 @@ class DokBNSPSingleProcessor:
         templates = TEMPLATE_DOK_BNSP.get(peserta.skema)
         if not templates:
             if callback_single:
-                callback_single(peserta.id_peserta, "error")
+                callback_single(peserta.id_peserta, "error", None)
+            logging.warning(f"Template Tidak Tersedia! -> {peserta.skema}")
             return False
 
         template_paths = [
@@ -80,18 +81,18 @@ class DokBNSPSingleProcessor:
                 output_folder, 
                 adjusted_progress_callback):
                 if callback_single:
-                    callback_single(peserta.id_peserta, "error")
+                    callback_single(peserta.id_peserta, "error", None)
+                logging.warning("Generated Dokument Gagal")
                 return False
             
         if callback_single:
-            callback_single(peserta.id_peserta, "completed")
+            callback_single(peserta.id_peserta, "completed", None)
         return True
 
     # === Word generation (dipindah utuh dari class lama) ===
     def _generate_document(self,id_peserta, row_data, template_path, output_folder, callback_progress):
         import pandas as pd
         import win32com.client as win32
-        from colorama import Fore as color, Style
 
         doc = None
         try:
@@ -128,7 +129,8 @@ class DokBNSPSingleProcessor:
             content = doc.Content
 
             total_items = len(replacements)
-            template_name, ext = os.path.splitext(os.path.basename(template_path))
+            basename = os.path.basename(template_path)
+            template_name, ext = os.path.splitext(basename)
             x = 0
             for placeholder, column in placeholder_mapping.items():
                 x += 1
@@ -174,6 +176,7 @@ class DokBNSPSingleProcessor:
                             shape.Height = h * ratio 
                     except Exception as e:
                         doc.Close(SaveChanges=False)  
+                        logging.warning(f"[Error] TTD Replacement Area -> {e}")
                         return False
                 else:
                     find.Text = placeholder
@@ -209,7 +212,7 @@ class DokBNSPSingleProcessor:
             return True
 
         except Exception as e:
-            print(color.RED, "Gagal generate:", e, Style.RESET_ALL)
+            logging.warning(f"Gagal generate dokumen -> {e}")
             return False
 
         finally:
@@ -251,19 +254,21 @@ class DokBNSPBatchProcessor:
                         continue
                 else:
                     if callback_global:
-                        callback_global('error')
+                        callback_global('error', None)
                     return
 
             except Exception as e:
+                logging.warning(f"[Error] Batch Processor -> {e}")
+                
                 if callback_single:
-                    callback_single(peserta.id_peserta, "error")
+                    callback_single(peserta.id_peserta, "error", None)
 
                 if callback_global:
-                    callback_global('error')
+                    callback_global('error', None)
                 return 
             
         if callback_global:
-            callback_global('completed')
+            callback_global('completed', None)
         return 
 
     def cleanup(self):

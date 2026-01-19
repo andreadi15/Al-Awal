@@ -9,7 +9,8 @@ from pages.pdf2image import Pdf2ImagePage
 from pages.projects import ProjectsPage
 from pages.settings import SettingsPage
 from services.database import init_db
-
+from services.logger import AppLogger
+import logging
 
 class App(ctk.CTk):
     NAV_WIDTH = 220
@@ -240,6 +241,7 @@ class App(ctk.CTk):
         self.update_idletasks()
 
 if __name__ == "__main__":
+    AppLogger.setup()
     init_db()
     app = App()
     app.mainloop()

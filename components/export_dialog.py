@@ -8,7 +8,7 @@ from services.export_excel import export_Excel
 from services.export_dok_bnsp import DokBNSPSingleProcessor, DokBNSPBatchProcessor
 from config import BASE_DIR,NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN,TEMPLATE_AWL_REPORT,TEMPLATE_REKAP_BNSP
 from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
-import os, threading, queue  
+import os, threading, queue, logging
 
 class ExportDialog(ctk.CTkToplevel):
     def __init__(self, parent, peserta_list, sertifikasi_info, callback):
@@ -470,7 +470,8 @@ class ExportDialog(ctk.CTkToplevel):
                     callback_progress=on_file_status
                 )
                     
-            except:
+            except Exception as e:
+                logging.warning(f"Err -> {e}")
                 self._on_row_error(peserta.id_peserta)
         
         threading.Thread(target=export_thread, daemon=True).start()
@@ -822,7 +823,7 @@ class ExportDialog(ctk.CTkToplevel):
                         
                 # Export data
                  
-                def on_single_status(peserta_id, status, progress):
+                def on_single_status(peserta_id, status, progress=None):
                     match status:
                         case s if 'running' in s:
                             self.after(0,lambda id=peserta_id, prog=progress:self._update_row_progress(id, prog))
@@ -857,7 +858,7 @@ class ExportDialog(ctk.CTkToplevel):
                 
             except Exception as e:
                 self.after(0, self.reset_progress)
-                messagebox.showwarning(f"Gagal ekspor:\n{str(e)}")
+                logging.warning(f"Err -> {e}")
             
             finally:
                 exporter.cleanup()
