@@ -223,9 +223,9 @@ class DokBNSPBatchProcessor:
         peserta_list,
         list_ttd_path,
         output_folder,
-        progress_callback=None,
-        progress_global_callback=None,
-        completion_callback=None
+        callback_progress=None,
+        callback_global_progress=None,
+        callback_completion=None
     ):
         total = len(peserta_list)
 
@@ -238,13 +238,13 @@ class DokBNSPBatchProcessor:
                     peserta,
                     list_ttd_path[peserta.id_peserta],
                     output_folder,
-                    progress_callback,
-                    progress_global_callback,
+                    callback_progress,
+                    callback_global_progress,
                     total,
                 )
 
                 if not result:
-                    completion_callback(False)
+                    callback_completion(False)
                     return
 
             except Exception as e:
@@ -252,12 +252,12 @@ class DokBNSPBatchProcessor:
                     "Informasi",
                     f"Error {peserta.nama}: {str(e)}"
                 )
-                if completion_callback:
-                    completion_callback(False)
+                if callback_completion:
+                    callback_completion(False)
                 return 
             
-        if completion_callback:
-            completion_callback(True)
+        if callback_completion:
+            callback_completion(True)
         return 
 
     def cleanup(self):

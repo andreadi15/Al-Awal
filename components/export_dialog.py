@@ -41,7 +41,7 @@ class ExportDialog(ctk.CTkToplevel):
         self.center_window()
         
         self.create_widgets()
-        self._process_queue()
+        # self._process_queue()
         
     def center_window(self):
         self.update_idletasks()
@@ -168,33 +168,33 @@ class ExportDialog(ctk.CTkToplevel):
         # Load initial format
         self.on_format_changed("Rekap BNSP")
     
-    def _process_queue(self):
-        """Process updates from worker threads"""
-        try:
-            while True:
-                try:
-                    update = self.progress_queue.get_nowait()
+    # def _process_queue(self):
+    #     """Process updates from worker threads"""
+    #     try:
+    #         while True:
+    #             try:
+    #                 update = self.progress_queue.get_nowait()
                     
-                    # Execute update based on type
-                    if update['type'] == 'row_progress':
-                        self._update_row_progress(
-                            update['peserta_id'],
-                            update['progress']
-                        )
-                    elif update['type'] == 'row_completed':
-                        self._on_row_completed(update['peserta_id'])
-                    elif update['type'] == 'row_error':
-                        self._on_row_error(update['peserta_id'], update['message'])
-                    elif update['type'] == 'global_progress':
-                        self.update_progress(update['value'])
+    #                 # Execute update based on type
+    #                 if update['type'] == 'row_progress':
+    #                     self._update_row_progress(
+    #                         update['peserta_id'],
+    #                         update['progress']
+    #                     )
+    #                 elif update['type'] == 'row_completed':
+    #                     self._on_row_completed(update['peserta_id'])
+    #                 elif update['type'] == 'row_error':
+    #                     self._on_row_error(update['peserta_id'], update['message'])
+    #                 elif update['type'] == 'global_progress':
+    #                     self.update_progress(update['value'])
                     
-                except queue.Empty:
-                    break
-        except:
-            pass
+    #             except queue.Empty:
+    #                 break
+    #     except:
+    #         pass
         
-        # Schedule next check (every 50ms)
-        self.after(50, self._process_queue)
+    #     # Schedule next check (every 50ms)
+    #     self.after(50, self._process_queue)
         
     def on_format_changed(self, selected_format):
         """Handle format change"""
@@ -435,17 +435,18 @@ class ExportDialog(ctk.CTkToplevel):
                 return
         
         # Check if already processing
-        if peserta._status == "processing":
-            messagebox.showinfo("Info", "Peserta sedang diproses!")
-            return
+        # if peserta._status == "processing":
+        #     messagebox.showinfo("Info", "Peserta sedang diproses!")
+        #     return
         
         # Update UI
         row_frame = self.peserta_rows[peserta.id_peserta]
         row_frame.grid_columnconfigure(3, weight=0, minsize=200)
+        peserta._progress_bar.configure(progress_color="#0017c2")
         peserta._status_label.destroy()
         peserta._progress_bar.pack(side="right", padx=(8, 5))
         peserta._run_btn.configure(state="disabled", fg_color="#666666")
-        peserta._status = "processing"
+        # peserta._status = "processing"
         
         # Start processing in thread
         def export_thread():
@@ -468,7 +469,7 @@ class ExportDialog(ctk.CTkToplevel):
                     peserta,  
                     self.selected_files[peserta.id_peserta],
                     OUTPUT_PATH,
-                    progress_callback=update_progress
+                    callback_progress=update_progress
                 )
                 
                 if success:
@@ -489,6 +490,7 @@ class ExportDialog(ctk.CTkToplevel):
                     'peserta_id': peserta.id_peserta,
                     'message': str(e)
                 })
+                print(f"Kontolll... -> {e}")
         
         # Run in background thread
         threading.Thread(target=export_thread, daemon=True).start()
@@ -543,29 +545,29 @@ class ExportDialog(ctk.CTkToplevel):
             ))
             
     
-    def animate_progress(self, target_value, label_text="", duration=500):
-        """
-        Animate progress bar smoothly
+    # def animate_progress(self, target_value, label_text="", duration=500):
+    #     """
+    #     Animate progress bar smoothly
         
-        Args:
-            target_value (float): Target progress 0.0 - 1.0
-            label_text (str): Label text
-            duration (int): Animation duration in ms
-        """
-        current = self.progress_bar.get()
-        steps = 20
-        increment = (target_value - current) / steps
-        delay = duration // steps
+    #     Args:
+    #         target_value (float): Target progress 0.0 - 1.0
+    #         label_text (str): Label text
+    #         duration (int): Animation duration in ms
+    #     """
+    #     current = self.progress_bar.get()
+    #     steps = 20
+    #     increment = (target_value - current) / steps
+    #     delay = duration // steps
         
-        def step(count):
-            if count < steps:
-                new_value = current + (increment * count)
-                self.update_progress(new_value, label_text)
-                self.after(delay, lambda: step(count + 1))
-            else:
-                self.update_progress(target_value, label_text)
+    #     def step(count):
+    #         if count < steps:
+    #             new_value = current + (increment * count)
+    #             self.update_progress(new_value, label_text)
+    #             self.after(delay, lambda: step(count + 1))
+    #         else:
+    #             self.update_progress(target_value, label_text)
         
-        step(0)
+    #     step(0)
 
     def show_progress(self):
         """Show progress bar container"""
@@ -685,7 +687,7 @@ class ExportDialog(ctk.CTkToplevel):
             pythoncom.CoInitialize()
             try:
                 # Update progress
-                self.after(0, lambda: self.update_progress(0.2))
+                self.after(0, lambda: self.update_global_progress(0.2))
                 
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 data_peserta = []
@@ -717,14 +719,14 @@ class ExportDialog(ctk.CTkToplevel):
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
                 
                 # Update progress
-                self.after(0, lambda: self.update_progress(0.5))
+                self.after(0, lambda: self.update_global_progress(0.5))
                 
                 # Export data
                 exporter = export_Excel(os.path.join(BASE_DIR, TEMPLATE_REKAP_BNSP))
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
                 # Update progress
-                self.after(0, lambda: self.update_progress(1.0))
+                self.after(0, lambda: self.update_global_progress(1.0))
                 
                 # Show result in main thread
                 if success:
@@ -750,7 +752,7 @@ class ExportDialog(ctk.CTkToplevel):
             import pythoncom
             pythoncom.CoInitialize()
             try:
-                self.after(0, lambda: self.update_progress(0.2))
+                self.after(0, lambda: self.update_global_progress(0.2))
                 
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 data_peserta = []
@@ -770,13 +772,13 @@ class ExportDialog(ctk.CTkToplevel):
                 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[AWL] Peserta BNSP - {tanggal_pelatihan}.xlsx")
                 
-                self.after(0, lambda: self.update_progress(0.5))
+                self.after(0, lambda: self.update_global_progress(0.5))
                 
                 # Export data
                 exporter = export_Excel(os.path.join(BASE_DIR, TEMPLATE_AWL_REPORT))
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
-                self.after(0, lambda: self.update_progress(1.0))
+                self.after(0, lambda: self.update_global_progress(1.0))
                 
                 if success:
                     self.after(300, lambda: self.show_success())
@@ -839,7 +841,7 @@ class ExportDialog(ctk.CTkToplevel):
         def export_thread():
             try:
                 # Show progress
-                self.after(0, lambda: self.update_progress(0))
+                self.after(0, lambda: self.update_global_progress(0))
                 
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 
@@ -871,8 +873,8 @@ class ExportDialog(ctk.CTkToplevel):
                     self.peserta_list, 
                     self.selected_files, 
                     OUTPUT_PATH,
-                    progress_callback=on_file_progress,
-                    progress_global_callback=on_global_progress,
+                    callback_progress=on_file_progress,
+                    callback_global_progress=on_global_progress,
                     completion_callback=on_all_complete
                 )
                 
