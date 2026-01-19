@@ -1,6 +1,4 @@
-# services/dok_bnsp_single.py
 import os
-from tkinter import messagebox
 from config import BASE_DIR, TEMPLATE_BASE, TEMPLATE_DOK_BNSP
 from models.peserta_model import PesertaModel
 from services.logic import format_kabupaten, format_tanggal_to_general
@@ -39,18 +37,14 @@ class DokBNSPSingleProcessor:
         peserta: PesertaModel, 
         ttd_path, 
         output_folder, 
-        callback_progress, 
-        callback_global_progress=None, 
-        total=None):
+        callback_single):
         """
         Proses single peserta
         """
         templates = TEMPLATE_DOK_BNSP.get(peserta.skema)
         if not templates:
-            messagebox.showinfo(
-                "Informasi",
-                f"Skema '{peserta.skema}' tidak ditemukan"
-            )
+            if callback_single:
+                callback_single(peserta.id_peserta, "error")
             return False
 
         template_paths = [
@@ -76,24 +70,25 @@ class DokBNSPSingleProcessor:
                 
                 total_progress = base_progress + current_template_progress
                 
-                if callback_progress:
-                    callback_progress(peserta_id, total_progress)
+                if callback_single:
+                    callback_single(peserta_id, "running", total_progress)
                     
             if not self._generate_document(
                 peserta.id_peserta, 
                 row_data, 
                 template, 
                 output_folder, 
-                adjusted_progress_callback, 
-                callback_global_progress, 
-                total):
+                adjusted_progress_callback):
+                if callback_single:
+                    callback_single(peserta.id_peserta, "error")
                 return False
-
+            
+        if callback_single:
+            callback_single(peserta.id_peserta, "completed")
         return True
 
     # === Word generation (dipindah utuh dari class lama) ===
-    def _generate_document(self,id_peserta, row_data, template_path, output_folder, callback_progress, callback_global_progress, total):
-        import time
+    def _generate_document(self,id_peserta, row_data, template_path, output_folder, callback_progress):
         import pandas as pd
         import win32com.client as win32
         from colorama import Fore as color, Style
@@ -133,7 +128,7 @@ class DokBNSPSingleProcessor:
             content = doc.Content
 
             total_items = len(replacements)
-            
+            template_name, ext = os.path.splitext(os.path.basename(template_path))
             x = 0
             for placeholder, column in placeholder_mapping.items():
                 x += 1
@@ -200,9 +195,7 @@ class DokBNSPSingleProcessor:
                 if callback_progress:
                     item_progress = (x / total_items) * 100
                     callback_progress(id_peserta, item_progress)
-                    
-            template_basename = os.path.basename(template_path)
-            template_name, ext = os.path.splitext(template_basename)
+                                
             kode = "_".join(template_name.replace("dok_", "").split('_')[:-1])
 
             filename = (
@@ -225,9 +218,6 @@ class DokBNSPSingleProcessor:
                 
                 
                 
-# services/dok_bnsp_batch.py
-from tkinter import messagebox
-
 class DokBNSPBatchProcessor:
 
     def __init__(self):
@@ -239,12 +229,9 @@ class DokBNSPBatchProcessor:
         peserta_list,
         list_ttd_path,
         output_folder,
-        callback_progress=None,
-        callback_global_progress=None,
-        callback_completion=None
+        callback_single,
+        callback_global
     ):
-        total = len(peserta_list)
-
         for index, peserta in enumerate(peserta_list, start=1):
             peserta: PesertaModel
             try:
@@ -254,26 +241,23 @@ class DokBNSPBatchProcessor:
                     peserta,
                     list_ttd_path[peserta.id_peserta],
                     output_folder,
-                    callback_progress,
-                    callback_global_progress,
-                    total,
+                    callback_single,
                 )
-
                 if not result:
-                    callback_completion(False)
+                    if callback_global:
+                        callback_global('error')
                     return
 
             except Exception as e:
-                messagebox.showinfo(
-                    "Informasi",
-                    f"Error {peserta.nama}: {str(e)}"
-                )
-                if callback_completion:
-                    callback_completion(False)
+                if callback_single:
+                    callback_single(peserta.id_peserta, "error")
+
+                if callback_global:
+                    callback_global('error')
                 return 
             
-        if callback_completion:
-            callback_completion(True)
+        if callback_global:
+            callback_global('completed')
         return 
 
     def cleanup(self):

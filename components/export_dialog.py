@@ -434,11 +434,6 @@ class ExportDialog(ctk.CTkToplevel):
                 messagebox.showwarning("Data Belum Lengkap", f"Data {peserta.nama} belum lengkap!")
                 return
         
-        # Check if already processing
-        # if peserta._status == "processing":
-        #     messagebox.showinfo("Info", "Peserta sedang diproses!")
-        #     return
-        
         # Update UI
         row_frame = self.peserta_rows[peserta.id_peserta]
         row_frame.grid_columnconfigure(3, weight=0, minsize=200)
@@ -455,29 +450,29 @@ class ExportDialog(ctk.CTkToplevel):
                 
                 exporter = DokBNSPSingleProcessor()
                 
-                def update_progress(peserta_id, progress_value):
-                    """Update individual file progress"""                    
-                    self.after(0, lambda id=peserta_id, prog=progress_value: 
-                    self._update_row_progress(id, prog))
+                def on_file_status(peserta_id, status, progress=None):
+                    match status:
+                        case s if 'running' in s:
+                            self.after(0,lambda id=peserta_id, prog=progress:self._update_row_progress(id, prog))
+
+                        case s if 'completed' in s:
+                            self.after(0,lambda id=peserta_id:self._on_row_completed(id))
+
+                        case s if 'error' in s:
+                            self.after(0,lambda id=peserta_id:self._on_row_error(id))
                 
-                success = exporter.process(
+                exporter.process(
                     index,
                     tanggal_pelatihan,
                     peserta,  
                     self.selected_files[peserta.id_peserta],
                     OUTPUT_PATH,
-                    callback_progress=update_progress
+                    callback_progress=on_file_status
                 )
-                
-                if success:
-                    self._on_row_completed(peserta.id_peserta)
-                else:
-                    self._on_row_error(peserta.id_peserta)
                     
             except:
                 self._on_row_error(peserta.id_peserta)
         
-        # Run in background thread
         threading.Thread(target=export_thread, daemon=True).start()
     
     def _update_row_progress(self, peserta_id, value):
@@ -777,6 +772,7 @@ class ExportDialog(ctk.CTkToplevel):
         missing_files = []
         missing_data = []
         for peserta in self.peserta_list:
+            peserta: PesertaModel
             if peserta.id_peserta not in self.selected_files:
                 missing_files.append(peserta.nama)
             
@@ -826,32 +822,39 @@ class ExportDialog(ctk.CTkToplevel):
                         
                 # Export data
                 exporter = DokBNSPBatchProcessor()
-                                              
-                def on_file_progress(peserta_id, progress):
-                    """Update individual file progress"""                    
-                    self.after(0, lambda id=peserta_id, prog=progress: 
-                    self._update_row_progress(id, prog))
-                
-                def on_global_progress(progress):
-                    self.after(0, lambda p=progress: self.update_global_progress(p))
-                    
-                def on_all_complete(status: bool):
-                    """Handle all files completed"""
-                    if status:
-                        self.after(0, lambda: self.update_global_progress(1.0))
-                        self.after(300, lambda: self.show_success())
-                    else:
-                        self.after(0, self.reset_progress)
-                        self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
-                
+                 
+                def on_single_status(peserta_id, status, progress):
+                    match status:
+                        case s if 'running' in s:
+                            self.after(0,lambda id=peserta_id, prog=progress:self._update_row_progress(id, prog))
+
+                        case s if 'completed' in s:
+                            self.after(0,lambda id=peserta_id:self._on_row_completed(id))
+
+                        case s if 'error' in s:
+                            self.after(0,lambda id=peserta_id:self._on_row_error(id))
+                                                                
+                def on_global_status(status, progress):
+                    match status:
+                        case s if 'running' in s:
+                            self.after(0, lambda p=progress: self.update_global_progress(p))
+
+                        case s if 'completed' in s:
+                            self.after(0, lambda: self.update_global_progress(1.0))
+                            self.after(300, lambda: self.show_success())
+
+                        case s if 'error' in s:
+                            self.after(0, self.reset_progress)
+                            self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!\n"))
+                        
+
                 exporter.batch_process(
                     tanggal_pelatihan, 
                     self.peserta_list, 
                     self.selected_files, 
                     OUTPUT_PATH,
-                    callback_progress=on_file_progress,
-                    callback_global_progress=on_global_progress,
-                    completion_callback=on_all_complete
+                    callback_single=on_single_status,
+                    callback_global=on_global_status,
                 )
                 
             except Exception as e:
