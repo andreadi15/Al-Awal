@@ -499,9 +499,9 @@ class ExportDialog(ctk.CTkToplevel):
         """Update individual row progress"""
         for peserta in self.peserta_list:
             if peserta.id_peserta == peserta_id:
+                print("Memek")
                 peserta._progress_bar.configure(progress_color="#0017c2")
                 peserta._progress_bar.set(value)
-                peserta._status_label.configure(text="✓ Done", text_color="#0017c2")
                 break
 
     def _on_row_completed(self, peserta_id):
@@ -568,7 +568,7 @@ class ExportDialog(ctk.CTkToplevel):
     #             self.update_progress(target_value, label_text)
         
     #     step(0)
-
+ 
     def show_progress(self):
         """Show progress bar container"""
         if not self.is_exporting:
@@ -880,7 +880,7 @@ class ExportDialog(ctk.CTkToplevel):
                 
             except Exception as e:
                 self.after(0, self.reset_progress)
-                self.after(100, lambda: messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}"))
+                print(f"Gagal ekspor:\n{str(e)}")
         
         # Run in background thread
         thread = threading.Thread(target=export_thread, daemon=True)

@@ -64,15 +64,35 @@ class DokBNSPSingleProcessor:
             tanggal_pelatihan,
             ttd_path
         )
+        
+        total_templates = len(template_paths)
 
-        for template in template_paths:
-            if not self._generate_document(index, peserta.id_peserta, row_data, template, output_folder, callback_progress, callback_global_progress, total):
+        for template_idx, template in enumerate(template_paths, start=1):
+            def adjusted_progress_callback(peserta_id, item_progress):
+                completed_templates = template_idx - 1
+                base_progress = (completed_templates / total_templates) * 100
+                
+                current_template_progress = (item_progress / 100) * (100 / total_templates)
+                
+                total_progress = base_progress + current_template_progress
+                
+                if callback_progress:
+                    callback_progress(peserta_id, total_progress)
+                    
+            if not self._generate_document(
+                peserta.id_peserta, 
+                row_data, 
+                template, 
+                output_folder, 
+                adjusted_progress_callback, 
+                callback_global_progress, 
+                total):
                 return False
 
         return True
 
     # === Word generation (dipindah utuh dari class lama) ===
-    def _generate_document(self, index, id_peserta, row_data, template_path, output_folder, callback_progress, callback_global_progress, total):
+    def _generate_document(self,id_peserta, row_data, template_path, output_folder, callback_progress, callback_global_progress, total):
         import time
         import pandas as pd
         import win32com.client as win32
@@ -102,7 +122,6 @@ class DokBNSPSingleProcessor:
                 self.word.Visible = False
 
             doc = self.word.Documents.Open(template_path)
-            time.sleep(0.3)
             
             replacements = {}
             for placeholder, column in placeholder_mapping.items():
@@ -113,6 +132,8 @@ class DokBNSPSingleProcessor:
 
             content = doc.Content
 
+            total_items = len(replacements)
+            
             x = 0
             for placeholder, column in placeholder_mapping.items():
                 x += 1
@@ -176,23 +197,18 @@ class DokBNSPSingleProcessor:
                         ReplaceWith=replacement,
                         Replace=wdReplaceAll
                     )
-                if x < len(replacements.items()):
-                    percent = x / len(replacements.items()) * 100
-                    if callback_progress:
-                        callback_progress(id_peserta, percent)
+                if callback_progress:
+                    item_progress = (x / total_items) * 100
+                    callback_progress(id_peserta, item_progress)
                     
-                    percent = ((x * index) / (total * len(replacements.items()))) * 100
-                    if callback_global_progress:
-                        callback_global_progress(percent)
-                    
-
-            template_name = os.path.basename(template_path).split(".")[0]
+            template_basename = os.path.basename(template_path)
+            template_name, ext = os.path.splitext(template_basename)
             kode = "_".join(template_name.replace("dok_", "").split('_')[:-1])
 
             filename = (
                 f"{row_data['Numbering']}-DOK-{kode.upper()} - "
                 f"{row_data['Name'].upper()} - "
-                f"{row_data['Skema'].upper()}.docx"
+                f"{row_data['Skema'].upper()}{ext}"
             )
 
             output_path = os.path.join(output_folder, filename)
