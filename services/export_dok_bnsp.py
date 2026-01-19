@@ -11,7 +11,7 @@ class DokBNSPSingleProcessor:
     def __init__(self, word_app=None):
         self.word = word_app
 
-    def peserta_to_row(self, tanggal_pelatihan, peserta, ttd_path, numbering):
+    def peserta_to_row(self, tanggal_pelatihan, peserta: PesertaModel, ttd_path, numbering):
         tanggal, bulan, tahun = format_tanggal_to_general(tanggal_pelatihan)
 
         return {
@@ -57,18 +57,19 @@ class DokBNSPSingleProcessor:
         )
 
         for template in template_paths:
-            if not self._generate_document(row_data, template, output_folder, callback_progress):
+            if not self._generate_document(peserta.id_peserta, row_data, template, output_folder, callback_progress):
                 return False
 
         return True
 
     # === Word generation (dipindah utuh dari class lama) ===
-    def _generate_document(self, row_data, template_path, output_folder, callback_progress):
+    def _generate_document(self, id_peserta, row_data, template_path, output_folder, callback_progress):
         import time
         import pandas as pd
         import win32com.client as win32
         from colorama import Fore as color, Style
 
+        doc = None
         try:
             os.makedirs(output_folder, exist_ok=True)
 
@@ -147,8 +148,8 @@ class DokBNSPSingleProcessor:
                             shape.Width = w * ratio
                             shape.Height = h * ratio 
                     except Exception as e:
-                        error = True
                         doc.Close(SaveChanges=False)  
+                        return False
                 else:
                     find.Text = placeholder
                     find.Replacement.ClearFormatting()
@@ -168,7 +169,7 @@ class DokBNSPSingleProcessor:
                     )
                 if x < len(replacements.items()):
                     percent = x / len(replacements.items()) * 100
-                    callback_progress(percent)
+                    callback_progress(id_peserta, percent)
                     
 
             template_name = os.path.basename(template_path).split(".")[0]
@@ -190,7 +191,7 @@ class DokBNSPSingleProcessor:
 
         finally:
             if doc:
-                doc.Close(False)
+                doc.Close(SaveChanges=False)
                 
                 
                 

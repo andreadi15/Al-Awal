@@ -457,13 +457,10 @@ class ExportDialog(ctk.CTkToplevel):
                 # Export single peserta
                 exporter = DokBNSPSingleProcessor()
                 
-                def on_progress(current, total):
-                    progress = current / total
-                    self.progress_queue.put({
-                        'type': 'row_progress',
-                        'peserta_id': peserta.id_peserta,
-                        'progress': progress
-                    })
+                def update_progress(peserta_id, progress_value):
+                    """Update individual file progress"""                    
+                    self.after(0, lambda id=peserta_id, prog=progress_value: 
+                    self._update_row_progress(id, prog))
                 
                 success = exporter.process(
                     index,
@@ -471,7 +468,7 @@ class ExportDialog(ctk.CTkToplevel):
                     peserta,  # Single peserta
                     self.selected_files[peserta.id_peserta],
                     OUTPUT_PATH,
-                    progress_callback=on_progress
+                    progress_callback=update_progress
                 )
                 
                 if success:
