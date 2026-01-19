@@ -232,6 +232,7 @@ class DokBNSPBatchProcessor:
         callback_single,
         callback_global
     ):
+        total = len(peserta_list)
         for index, peserta in enumerate(peserta_list, start=1):
             peserta: PesertaModel
             try:
@@ -243,7 +244,12 @@ class DokBNSPBatchProcessor:
                     output_folder,
                     callback_single,
                 )
-                if not result:
+                if result:
+                    if callback_global:
+                        percent = (index / total) * 100
+                        callback_global('running', percent)
+                        continue
+                else:
                     if callback_global:
                         callback_global('error')
                     return

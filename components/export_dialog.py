@@ -809,7 +809,7 @@ class ExportDialog(ctk.CTkToplevel):
                 pesan
             )
             return
-        
+        exporter = DokBNSPBatchProcessor()
         def export_thread():
             try:
                 # Show progress
@@ -821,7 +821,6 @@ class ExportDialog(ctk.CTkToplevel):
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
                         
                 # Export data
-                exporter = DokBNSPBatchProcessor()
                  
                 def on_single_status(peserta_id, status, progress):
                     match status:
@@ -834,7 +833,7 @@ class ExportDialog(ctk.CTkToplevel):
                         case s if 'error' in s:
                             self.after(0,lambda id=peserta_id:self._on_row_error(id))
                                                                 
-                def on_global_status(status, progress):
+                def on_global_status(status, progress=None):
                     match status:
                         case s if 'running' in s:
                             self.after(0, lambda p=progress: self.update_global_progress(p))
@@ -845,8 +844,7 @@ class ExportDialog(ctk.CTkToplevel):
 
                         case s if 'error' in s:
                             self.after(0, self.reset_progress)
-                            self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!\n"))
-                        
+                            self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!\n"))    
 
                 exporter.batch_process(
                     tanggal_pelatihan, 
@@ -859,7 +857,10 @@ class ExportDialog(ctk.CTkToplevel):
                 
             except Exception as e:
                 self.after(0, self.reset_progress)
-                print(f"Gagal ekspor:\n{str(e)}")
+                messagebox.showwarning(f"Gagal ekspor:\n{str(e)}")
+            
+            finally:
+                exporter.cleanup()
         
         # Run in background thread
         thread = threading.Thread(target=export_thread, daemon=True)
