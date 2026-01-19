@@ -852,8 +852,7 @@ class ExportDialog(ctk.CTkToplevel):
                     self.after(0, lambda id=peserta_id, prog=progress: 
                     self._update_row_progress(id, prog))
                 
-                def on_global_progress(completed_task, total_task):
-                    progress = (completed_task / total_task * 100)  
+                def on_global_progress(progress):
                     self.after(0, lambda p=progress: self.update_global_progress(p))
                     
                 def on_all_complete(status: bool):
