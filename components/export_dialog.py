@@ -446,16 +446,13 @@ class ExportDialog(ctk.CTkToplevel):
         peserta._status_label.destroy()
         peserta._progress_bar.pack(side="right", padx=(8, 5))
         peserta._run_btn.configure(state="disabled", fg_color="#666666")
-        # peserta._status = "processing"
         
-        # Start processing in thread
         def export_thread():
             try:
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
                 
-                # Export single peserta
                 exporter = DokBNSPSingleProcessor()
                 
                 def update_progress(peserta_id, progress_value):
@@ -473,24 +470,12 @@ class ExportDialog(ctk.CTkToplevel):
                 )
                 
                 if success:
-                    self.progress_queue.put({
-                        'type': 'row_completed',
-                        'peserta_id': peserta.id_peserta
-                    })
+                    self._on_row_completed(peserta.id_peserta)
                 else:
-                    self.progress_queue.put({
-                        'type': 'row_error',
-                        'peserta_id': peserta.id_peserta,
-                        'message': "Export failed"
-                    })
+                    self._on_row_error(peserta.id_peserta)
                     
-            except Exception as e:
-                self.progress_queue.put({
-                    'type': 'row_error',
-                    'peserta_id': peserta.id_peserta,
-                    'message': str(e)
-                })
-                print(f"Kontolll... -> {e}")
+            except:
+                self._on_row_error(peserta.id_peserta)
         
         # Run in background thread
         threading.Thread(target=export_thread, daemon=True).start()
@@ -499,9 +484,8 @@ class ExportDialog(ctk.CTkToplevel):
         """Update individual row progress"""
         for peserta in self.peserta_list:
             if peserta.id_peserta == peserta_id:
-                print("Memek")
                 peserta._progress_bar.configure(progress_color="#0017c2")
-                peserta._progress_bar.set(value)
+                peserta._progress_bar.set(value/100)
                 break
 
     def _on_row_completed(self, peserta_id):
@@ -510,21 +494,13 @@ class ExportDialog(ctk.CTkToplevel):
             if peserta.id_peserta == peserta_id:
                 peserta._progress_bar.configure(progress_color="#4caf50")
                 peserta._progress_bar.set(1.0)
-                peserta._status_label.configure(text="✓ Done", text_color="#4caf50")
-                peserta._run_btn.configure(text="✓", fg_color="#4caf50", state="disabled")
-                peserta._status = "completed"
                 break
 
-    def _on_row_error(self, peserta_id, message):
+    def _on_row_error(self, peserta_id):
         """Handle row error"""
         for peserta in self.peserta_list:
             if peserta.id_peserta == peserta_id:
                 peserta._progress_bar.configure(progress_color="#d32f2f")
-                peserta._status_label.configure(text=f"❌ {message[:20]}", text_color="#d32f2f")
-                peserta._status_label.pack(fill="x", expand=True)
-                peserta._progress_bar.pack_forget()
-                peserta._run_btn.configure(state="normal", fg_color="#34a853")
-                peserta._status = "error"
                 break
             
     def do_export(self):
