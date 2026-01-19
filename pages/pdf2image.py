@@ -462,7 +462,6 @@ class Pdf2ImagePage(ctk.CTkFrame):
         """Run or pause single file processing"""
         pdf_model = self.pdf_files[index]
         row_widget = self.file_rows[index]
-        
         # Check if currently processing
         if pdf_model.status == "processing":
             # Pause this file
@@ -484,6 +483,10 @@ class Pdf2ImagePage(ctk.CTkFrame):
         pdf_model = self.pdf_files[index]
         row_widget = self.file_rows[index]
         
+        print(f"[DEBUG] Starting processing for index {index}")
+        print(f"[DEBUG] File path: {pdf_model.file_path}")
+        print(f"[DEBUG] Total pages: {pdf_model.total_pages}")
+        
         # Update UI - show progress bar
         row_widget._status_label.pack_forget()
         row_widget._progress_label.pack(side="left", padx=(0, 10))
@@ -496,7 +499,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         # Define callbacks
         def on_progress(current_page, total_pages):
-            # Update progress bar and label
+            print(f"[DEBUG] Progress: {current_page}/{total_pages}")  # ← TAMBAH
             progress = (current_page / total_pages) * 100
             pdf_model.update_progress(current_page)
             
@@ -504,6 +507,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 self._update_row_progress(idx, prog, curr, tot))
         
         def on_complete(success, message):
+            print(f"[DEBUG] Complete: success={success}, message={message}")  # ← TAMBAH
             if success:
                 pdf_model.set_completed()
                 self.after(0, lambda idx=index: self._on_file_completed(idx, success=True))
@@ -517,7 +521,9 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         # Start processing
         pdf_model.status = "processing"
+        print(f"[DEBUG] Calling processor.process_pdf()...")  # ← TAMBAH
         processor.process_pdf(pdf_model, self.make_folder, on_progress, on_complete)
+        print(f"[DEBUG] processor.process_pdf() called")  # ← TAMBAH
     
     def pause_single_file(self, index: int):
         """Pause single file processing"""

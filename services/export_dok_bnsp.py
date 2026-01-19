@@ -2,6 +2,7 @@
 import os
 from tkinter import messagebox
 from config import BASE_DIR, TEMPLATE_BASE, TEMPLATE_DOK_BNSP
+from models.peserta_model import PesertaModel
 from services.logic import format_kabupaten, format_tanggal_to_general
 
 
@@ -31,7 +32,7 @@ class DokBNSPSingleProcessor:
             'ttd_participant': ttd_path
         }
 
-    def process(self, index, tanggal_pelatihan, peserta, ttd_path, output_folder, callback_progress):
+    def process(self, index, tanggal_pelatihan, peserta: PesertaModel, ttd_path, output_folder, callback_progress):
         """
         Proses single peserta
         """
@@ -51,7 +52,7 @@ class DokBNSPSingleProcessor:
         row_data = self.peserta_to_row(
             tanggal_pelatihan,
             peserta,
-            ttd_path[peserta.id_peserta],
+            ttd_path,
             index
         )
 
@@ -205,36 +206,44 @@ class DokBNSPBatchProcessor:
         self,
         tanggal_pelatihan,
         peserta_list,
-        ttd_path,
+        list_ttd_path,
         output_folder,
-        progress_callback=None
+        progress_callback=None,
+        progress_global_callback=None,
+        completion_callback=None
     ):
         total = len(peserta_list)
-        success = 0
 
         for index, peserta in enumerate(peserta_list, start=1):
+            peserta: PesertaModel
             try:
                 result = self.single_processor.process(
                     index,
                     tanggal_pelatihan,
                     peserta,
-                    ttd_path,
-                    output_folder
+                    list_ttd_path[peserta.id_peserta],
+                    output_folder,
+                    progress_callback
                 )
 
-                if result:
-                    success += 1
+                if not result:
+                    completion_callback(False)
+                    return
 
-                if progress_callback:
-                    progress_callback(index, total)
+                if progress_global_callback:
+                    progress_global_callback(index, total)
 
             except Exception as e:
                 messagebox.showinfo(
                     "Informasi",
                     f"Error {peserta.nama}: {str(e)}"
                 )
-
-        return success
+                if completion_callback:
+                    completion_callback(False)
+                return 
+        if completion_callback:
+            completion_callback(True)
+        return 
 
     def cleanup(self):
         if self.single_processor.word:

@@ -3,8 +3,9 @@
 # =======================
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
+from models.peserta_model import PesertaModel
 from services.export_excel import export_Excel
-from services.export_dok_bnsp import DokBNSPBatchProcessor, DokBNSPSingleProcessor
+from services.export_dok_bnsp import DokBNSPSingleProcessor, DokBNSPBatchProcessor
 from config import BASE_DIR,NAMA_PERUSAHAAN,EMAIL,LOKASI_PERUSAHAAN,TEMPLATE_AWL_REPORT,TEMPLATE_REKAP_BNSP
 from services.logic import return_format_tanggal,get_text_hari,format_kabupaten
 import os, threading, queue  
@@ -295,6 +296,8 @@ class ExportDialog(ctk.CTkToplevel):
         
         # Rows
         for i, peserta in enumerate(self.peserta_list, start=1):
+            peserta: PesertaModel
+            
             row_frame = ctk.CTkFrame(self.content_container, fg_color="#2a2a2a")
             row_frame.pack(fill="x", pady=2)
             
@@ -370,7 +373,7 @@ class ExportDialog(ctk.CTkToplevel):
                 fg_color="#34a853",
                 hover_color="#2d8e47",
                 corner_radius=6,
-                command=lambda p=peserta, idx=i: self.run_single_peserta(p, idx)
+                command=lambda p=peserta, idx=i: self.run_single_peserta(idx, p)
             )
             run_btn.grid(row=0, column=4, padx=10, pady=5)
             
@@ -418,7 +421,7 @@ class ExportDialog(ctk.CTkToplevel):
             
             path_label.configure(text=display_name, text_color="#4caf50")
     
-    def run_single_peserta(self, peserta, numbering):
+    def run_single_peserta(self, index, peserta: PesertaModel):
         """Run export for single peserta"""
         # Validation
         if peserta.id_peserta not in self.selected_files:
@@ -452,7 +455,7 @@ class ExportDialog(ctk.CTkToplevel):
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
                 
                 # Export single peserta
-                exporter = export_Dok_BNSP()
+                exporter = DokBNSPSingleProcessor()
                 
                 def on_progress(current, total):
                     progress = current / total
@@ -462,10 +465,11 @@ class ExportDialog(ctk.CTkToplevel):
                         'progress': progress
                     })
                 
-                success = exporter.export_dokumen(
+                success = exporter.process(
+                    index,
                     tanggal_pelatihan,
-                    [peserta],  # Single peserta
-                    {peserta.id_peserta: self.selected_files[peserta.id_peserta]},
+                    peserta,  # Single peserta
+                    self.selected_files[peserta.id_peserta],
                     OUTPUT_PATH,
                     progress_callback=on_progress
                 )
@@ -492,11 +496,11 @@ class ExportDialog(ctk.CTkToplevel):
         # Run in background thread
         threading.Thread(target=export_thread, daemon=True).start()
     
-    def _update_row_progress(self, peserta_id, progress):
+    def _update_row_progress(self, peserta_id, value):
         """Update individual row progress"""
         for peserta in self.peserta_list:
             if peserta.id_peserta == peserta_id:
-                peserta._progress_bar.set(progress)
+                peserta._progress_bar.set(value)
                 break
 
     def _on_row_completed(self, peserta_id):
@@ -534,7 +538,11 @@ class ExportDialog(ctk.CTkToplevel):
             elif selected_format == "Dokumen BNSP":
                 self.export_dokumen_bnsp()
         except Exception as e:
-            messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}")
+            self.after(10, lambda: messagebox.showerror(
+                "Error",
+                f"Gagal ekspor:\n{str(e)}"
+            ))
+            
     
     def animate_progress(self, target_value, label_text="", duration=500):
         """
@@ -602,12 +610,12 @@ class ExportDialog(ctk.CTkToplevel):
         # Hide progress
         self.progress_frame.pack_forget()
         
-        # Extract filename from path
-        folder_name = os.path.basename(output_path)
-        parent_folder = os.path.dirname(output_path)
+        # # Extract filename from path
+        # folder_name = os.path.basename(output_path)
+        # parent_folder = os.path.dirname(output_path)
         
         # Update success message
-        self.success_path.configure(text=f"📁 {folder_name}\n📂 {parent_folder}")
+        # self.success_path.configure(text=f"📁 {folder_name}\n📂 {parent_folder}")
         
         # Show success frame
         self.success_frame.pack(fill="both", expand=True)
@@ -628,7 +636,7 @@ class ExportDialog(ctk.CTkToplevel):
         self.reset_progress()
         self.reset_ui_state()
         
-    def update_progress(self, value, show_status=True):
+    def update_global_progress(self, value, show_status=True):
         """
         Update progress bar dan percentage label
         
@@ -840,30 +848,36 @@ class ExportDialog(ctk.CTkToplevel):
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
                         
                 # Export data
-                exporter = export_Dok_BNSP()
+                exporter = DokBNSPBatchProcessor()
+                                              
+                def on_file_progress(peserta_id, progress):
+                    """Update individual file progress"""                    
+                    self.after(0, lambda id=peserta_id, prog=progress: 
+                    self._update_row_progress(id, prog))
                 
-                # Create progress callback
-                def on_progress(current, total):
-                    progress = current / total  # 0 to 100%
-                    self.after(0, lambda p=progress: self.update_progress(p))
+                def on_global_progress(completed_task, total_task):
+                    progress = (completed_task / total_task * 100)  
+                    self.after(0, lambda p=progress: self.update_global_progress(p))
+                    
+                def on_all_complete(status: bool):
+                    """Handle all files completed"""
+                    if status:
+                        self.after(0, lambda: self.update_global_progress(1.0))
+                        self.after(300, lambda: self.show_success())
+                    else:
+                        self.after(0, self.reset_progress)
+                        self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
                 
-                success = exporter.export_dokumen(
+                exporter.batch_process(
                     tanggal_pelatihan, 
                     self.peserta_list, 
                     self.selected_files, 
                     OUTPUT_PATH,
-                    progress_callback=on_progress
+                    progress_callback=on_file_progress,
+                    progress_global_callback=on_global_progress,
+                    completion_callback=on_all_complete
                 )
                 
-                # Update progress: Complete
-                if success:
-                    self.after(0, lambda: self.update_progress(1.0))
-                    # Show success message in center instead of messagebox
-                    self.after(300, lambda: self.show_success(OUTPUT_PATH))
-                else:
-                    self.after(0, self.reset_progress)
-                    self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
-                    
             except Exception as e:
                 self.after(0, self.reset_progress)
                 self.after(100, lambda: messagebox.showerror("Error", f"Gagal ekspor:\n{str(e)}"))
