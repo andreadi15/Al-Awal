@@ -17,6 +17,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
         self.pdf_files = []  # List[PdfFileModel]
         self.make_folder = True
         self.individual_processors = {}  # {index: PdfProcessor}
+        self.current_batch_processor = None  # ✅ TAMBAH INI - Track batch processor
+        self.is_batch_running = False
         
         # UI Components (will be created)
         self.file_rows = {}  # List of row widgets
@@ -207,7 +209,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
             height=50,
             width=150,
             corner_radius=10,
-            command=self.run_all_files
+            command=self.start_batch_processing
         )
         self.run_all_btn.pack(side="right", padx=20, pady=15)
     
@@ -273,15 +275,6 @@ class Pdf2ImagePage(ctk.CTkFrame):
             self.file_rows.clear()
             self.refresh_file_list()
             self.update_footer_visibility()
-    
-    def run_all_files(self):
-        """Run all files or pause all"""
-        # if self.batch_processor.is_running:
-        #     # Pause all
-        #     self.pause_all_processing()
-        # else:
-            # Run all
-        self.start_batch_processing()
     
     # ==========================================
     # UI UPDATE METHODS
@@ -473,10 +466,12 @@ class Pdf2ImagePage(ctk.CTkFrame):
         pdf_model._progress_label.pack(side="left", padx=(0, 10))
         pdf_model._progress_bar.pack(side="left", fill="x", expand=True)
         pdf_model._progress_bar.set(0)
-        pdf_model._run_btn.configure(text="⏸️ Pause", fg_color="#ff9800")
+        pdf_model._run_btn.configure(text="⏳ Running...", fg_color="#666666",state="disabled")
+        
         print("asasasasas")
         # Create processor
         processor = PdfProcessor()
+        # self.individual_processors[pdf_model.file_id] = processor
         # self.individual_processors[index] = processor
         print("accccc")
         # Define callbacks
@@ -514,14 +509,27 @@ class Pdf2ImagePage(ctk.CTkFrame):
     #         processor.pause()
     #         pdf_model.status = "paused"
     
-    def _update_row_progress(self, model, progress):
+    def _update_row_progress(self, model: PdfFileModel, progress):
         """Update row progress bar and label"""
         # if index >= len(self.file_rows):
         #     return
         # pdf_model = next(p for p in self.pdf_files if p.file_id == file_id)
+        for pdf_model in self.pdf_files:
+            pdf_model: PdfFileModel
+            if model.file_id == pdf_model.file_id:
+                if progress >= 100:
+                    model._progress_bar.configure(progress_color="#4caf50")  # Green
+                    model._progress_label.configure(text_color="#4caf50")
+                elif progress >= 50:
+                    model._progress_bar.configure(progress_color="#2196f3")  # Blue
+                else:
+                    model._progress_bar.configure(progress_color="#ff9800")  # Orange
+                    
+                model._progress_bar.set(progress/100)
+                model._progress_label.configure(text=f"{int(progress)}%")
+                break
         
-        model._progress_bar.set(progress/100)
-        model._progress_label.configure(text=f"{int(progress)}%")
+        
     
     def _on_row_completed(self, model):
         """Handle file completion"""
@@ -573,9 +581,10 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # )
 
 
-# ==========================================
-    # BATCH PROCESSING (RUN ALL)
-    # ==========================================
+        # ==========================================
+        # BATCH PROCESSING (RUN ALL)
+        # ==========================================
+   
     def start_batch_processing(self):
         """Start processing all files sequentially"""
         if not self.pdf_files:
@@ -583,10 +592,10 @@ class Pdf2ImagePage(ctk.CTkFrame):
             return
         
         # Check if any files can be processed
-        processable = [p for p in self.pdf_files if p.status not in ["completed", "paused"]]
-        if not processable:
-            messagebox.showinfo("Info", "All files are already processed or paused")
-            return
+        # processable = [p for p in self.pdf_files if p.status not in ["completed", "paused"]]
+        # if not processable:
+        #     messagebox.showinfo("Info", "All files are already processed or paused")
+        #     return
         
         # Reset all idle files
         # for pdf_model in self.pdf_files:
@@ -596,8 +605,9 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # Update Run All button
         self.run_all_btn.configure(
             text="⏸❌ Cancel",
-            fg_color="#ff9800",
-            hover_color="#f57c00"
+            fg_color="#ff0000",
+            hover_color="#f50000",
+            command=self.cancel_batch_processing
         )
         
         # Update global progress
@@ -609,55 +619,63 @@ class Pdf2ImagePage(ctk.CTkFrame):
         for pdf_model in self.pdf_files:
             # row_frame = self.peserta_rows[pdf_model.file_id]
             # row_frame.grid_columnconfigure(3, weight=0, minsize=200)
-                                       
+                                    
+            pdf_model._progress_label.pack(side="left", padx=(0, 10))
+            # pdf_model._progress_bar.configure(progress_color="#484848")
             pdf_model._progress_bar.pack(side="left", fill="x", expand=True)
             pdf_model._progress_bar.set(0)
             pdf_model._status_label.destroy()
-            pdf_model._progress_bar.configure(progress_color="#484848")
-            pdf_model._run_btn.configure(state="disabled", fg_color="#666666")
+            pdf_model._run_btn.configure(text="⏳ Running...", fg_color="#666666",state="disabled")
         
-        batch_processor = PdfBatchProcessor()
+        self.current_batch_processor = PdfBatchProcessor()  # ✅ UBAH INI - Store reference
+        self.is_batch_running = True  # ✅  
         def process_thread():
             try:
                 progress_map = {f.file_id: 0 for f in self.pdf_files}
                 completed_count = 0
                 total_files = len(self.pdf_files)
-                def on_single_status(file_id, status, progress=None):
+                def on_single_status(model, status, progress=None):
                     nonlocal completed_count
                     match status:
                         case s if 'running' in s:
-                            progress_map[file_id] = progress
+                            progress_map[model] = progress
                         
-                            self.after(0, lambda id=file_id, prog=progress: self._update_row_progress(id, prog))
+                            self.after(0, lambda mod=model, prog=progress: self._update_row_progress(mod, prog))
                             
                             total_progress = sum(progress_map.values())
                             avg_progress = total_progress / (total_files * 100)  
-                            self.after(0, lambda avg=avg_progress: self._on_global_progress(avg))
+                            self.after(0, lambda avg=avg_progress: self._on_global_progress(completed_count, total_files, avg))
 
                         case s if 'completed' in s:
                             completed_count += 1
-                            progress_map[file_id] = 100  
+                            progress_map[model] = 100  
                             
-                            self.after(0, lambda id=file_id: self._on_row_completed(id))
+                            self.after(0, lambda mod=model: self._on_row_completed(mod))
                             
                             avg_progress = sum(progress_map.values()) / (total_files * 100)
-                            self.after(0, lambda avg=avg_progress: self._on_global_progress(avg))
-
+                            self.after(0, lambda avg=avg_progress: self._on_global_progress(completed_count, total_files, avg))
+                        
+                        case s if 'cancelled' in s:
+                            self.after(0, lambda mod=pdf_model: self._on_row_cancelled(mod))
+                            
                         case s if 'error' in s:
-                            self.after(0,lambda id=file_id: self._on_row_error(id))
+                            self.after(0,lambda mod=model: self._on_row_error(mod))
                 
                 def on_global_status(status):
                     match status:
                         case s if 'completed' in s:
-                            self.after(0, lambda: self._on_global_progress(1.0))
+                            self.after(0, lambda: self._on_global_progress(completed_count, total_files, 1.0))
                             self.after(300, lambda: self._on_global_completed())
 
                         case s if 'error' in s:
                             # self.after(0, self.reset_progress)
-                            self.after(0, lambda: self._on_global_error(None))
+                            self.after(0, lambda: self._on_global_error())
+                        
+                        case s if 'cancelled' in s:
+                            self.after(0, lambda: self._on_global_cancelled())
                 
                 # Start batch processing
-                batch_processor.process_all(
+                self.current_batch_processor.process_all(
                     self.pdf_files,
                     self.make_folder,
                     on_single_status,
@@ -675,7 +693,75 @@ class Pdf2ImagePage(ctk.CTkFrame):
         thread = Thread(target=process_thread, daemon=True)
         thread.start()
         
+    def cancel_batch_processing(self):
+        """Cancel batch processing and cleanup"""
+        if not self.is_batch_running or not self.current_batch_processor:
+            return
         
+        # Set cancel flag
+        self.current_batch_processor.cancel()
+        
+        # Cleanup converted files
+        self.current_batch_processor.cleanup_converted_files()
+        
+        # Update all non-completed rows to cancelled (red)
+        for pdf_model in self.pdf_files:
+            if hasattr(pdf_model, '_progress_bar'):
+                current_progress = pdf_model._progress_bar.get()
+                if current_progress < 1.0:  # Not completed
+                    self._on_row_cancelled(pdf_model)
+        
+        self.is_batch_running = False
+        
+        # Update global UI
+        self.global_progress_bar.configure(progress_color="#d32f2f")
+        self.global_progress_label.configure(text="❌ Batch cancelled - Converted files deleted")
+        
+        self.run_all_btn.configure(
+            text="▶️ Run All",
+            fg_color="#34a853",
+            hover_color="#2d8e47",
+            command=self.run_all_files,
+            state="normal"
+        )
+
+    def _on_row_cancelled(self, model: PdfFileModel):
+        """Handle row cancelled - Mark as red"""
+        model._progress_bar.configure(progress_color="#d32f2f")  # Red
+        model._progress_label.configure(text_color="#d32f2f")
+        
+        # Re-enable button for retry
+        if hasattr(model, '_run_btn'):
+            model._run_btn.configure(
+                state="normal",
+                fg_color="#34a853",
+                text="▶️ Run"
+            )
+
+    def _on_global_cancelled(self):
+        """Handle batch cancelled"""
+        self.is_batch_running = False
+        
+        # Cleanup
+        if self.current_batch_processor:
+            self.current_batch_processor.cleanup_converted_files()
+        
+        self.global_progress_bar.configure(progress_color="#d32f2f")
+        self.global_progress_label.configure(text="❌ Batch cancelled - Files cleaned up")
+        
+        self.run_all_btn.configure(
+            text="▶️ Run All",
+            fg_color="#34a853",
+            hover_color="#2d8e47",
+            command=self.run_all_files,
+            state="normal"
+        )
+        
+        # Mark incomplete files as red
+        for pdf_model in self.pdf_files:
+            if hasattr(pdf_model, '_progress_bar'):
+                if pdf_model._progress_bar.get() < 1.0:
+                    self._on_row_cancelled(pdf_model)
     
     # # def pause_all_processing(self):
     #     """Pause all processing"""
@@ -736,14 +822,20 @@ class Pdf2ImagePage(ctk.CTkFrame):
     
     def _on_global_progress(self, completed: int, total: int, progress: float):
         """Update global progress bar and label"""
-        self.global_progress_bar.set(progress / 100)
         
-        # Calculate remaining
+        if progress * 100 >= 100:
+            self.global_progress_bar.configure(progress_color="#4caf50")  # Green
+        elif progress * 100 >= 50:
+            self.global_progress_bar.configure(progress_color="#2196f3")  # Blue
+        else:
+            self.global_progress_bar.configure(progress_color="#ff9800")
+        self.global_progress_bar.set(progress)
+        
         remaining = total - completed
         
         if remaining > 0:
             self.global_progress_label.configure(
-                text=f"Processing {completed}/{total} files ({int(progress)}%) • {remaining} remaining"
+                text=f"Processing {completed}/{total} files ({int(progress * 100)}%) • {remaining} remaining"
             )
         else:
             self.global_progress_label.configure(
@@ -753,11 +845,12 @@ class Pdf2ImagePage(ctk.CTkFrame):
     def _on_global_completed(self):
         """Handle batch processing completion"""
         # Update global progress
+        self.is_batch_running = False 
         self.global_progress_bar.set(1.0)
         self.global_progress_bar.configure(progress_color="#34a853")
         
         # # Count statuses
-        completed = sum(self.pdf_files)
+        completed = len(self.pdf_files)
         # paused = sum(1 for p in self.pdf_files if p.status == "paused")
         # error = sum(1 for p in self.pdf_files if p.status == "error")
         
@@ -774,7 +867,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
         self.run_all_btn.configure(
             text="▶️ Run All",
             fg_color="#34a853",
-            hover_color="#2d8e47"
+            hover_color="#2d8e47",
+            command=self.start_batch_processing  # ✅ Reset command
         )
         
         # Show completion message
@@ -786,9 +880,25 @@ class Pdf2ImagePage(ctk.CTkFrame):
         #     message += f"❌ Failed: {error}\n"
         
         # messagebox.showinfo("Completed", message)
+        self.is_batch_running = False
     
-    def _on_global_error(self, msg=None):
-        self.global_progress_bar.configure(progress_color="#db1717")
+    def _on_global_error(self):
+        self.is_batch_running = False  # ✅ TAMBAH
+    
+        # Cleanup converted files on error
+        if self.current_batch_processor:
+            self.current_batch_processor.cleanup_converted_files()
+        
+        self.global_progress_bar.configure(progress_color="#d32f2f")
+        self.global_progress_label.configure(text="❌ Error - Converted files deleted")
+        
+        self.run_all_btn.configure(
+            text="▶️ Run All",
+            fg_color="#34a853",
+            hover_color="#2d8e47",
+            command=self.start_batch_processing,
+            state="normal"
+        )
         
     # ==========================================
     # UTILITY METHODS

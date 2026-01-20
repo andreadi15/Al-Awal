@@ -32,6 +32,7 @@ class PdfProcessor:
     """Service untuk convert PDF to Images dengan threading support"""
     
     def __init__(self):
+        self.is_cancelled = False
         self.is_running = False
         self.is_paused = False
         self.current_thread: Optional[threading.Thread] = None
@@ -84,6 +85,11 @@ class PdfProcessor:
                 #     progress_callback(pdf_model.file_id, 'error', "Paused by user")
                 #     return
                 
+                if self.is_cancelled:
+                    doc.close()
+                    progress_callback(pdf_model, 'cancelled')
+                    return False
+                
                 page = doc.load_page(page_num)
                 pix = page.get_pixmap(dpi=200)
                 
@@ -91,9 +97,15 @@ class PdfProcessor:
                 output_path = os.path.join(output_dir, output_filename)
                 pix.save(output_path)
                 percent = ((page_num + 1) / total_pages) * 100
-                if progress_callback:
-                    progress_callback(pdf_model, 'running', percent)
-                time.sleep(0.01)
+                progress_callback(pdf_model, 'running', percent)
+                time.sleep(0.02)
+            
+            output_dir_info = {
+                'output_dir': output_dir,
+                'make_folder': make_folder,
+                'base_name': base_name
+            }
+            pdf_model._conversion_info = output_dir_info
             
             doc.close()
             progress_callback(pdf_model, 'completed')
@@ -106,6 +118,10 @@ class PdfProcessor:
         
         # self.is_running = True
         # self.is_paused = False
+    
+    # def cancel(self):
+    #     """Cancel current processing"""
+    #     self.is_cancelled = True
     
     # def pause(self):
     #     """Pause current processing"""
@@ -134,6 +150,8 @@ class PdfBatchProcessor:
         # self.current_index = 0
         # self.processors = {} 
         self.processor = PdfProcessor()
+        self.is_cancelled = False
+        self.converted_files = []
         
     def process_all(
         self,
@@ -142,7 +160,7 @@ class PdfBatchProcessor:
         single_callback,  
         global_callback
     ):
-        
+        self.converted_files.clear()
         # def _process_next(index: int):
         #     if index >= len(pdf_models) or self.is_paused:
         #         success_count = sum(1 for p in pdf_models if p.status == "completed")
@@ -172,13 +190,23 @@ class PdfBatchProcessor:
 
         # for idx, pdf_model in enumerate(pdf_models,start=1):
         for pdf_model in pdf_models:
+            if self.is_cancelled:
+                global_callback('cancelled')
+                return
+
+            self.processor.is_cancelled = False
+            
             result = self.processor.process_pdf(pdf_model, make_folder, single_callback)
             
             if not result:
                 if global_callback:
                     global_callback('error')
                 return
-                
+        
+        self.converted_files.append({
+            'model': pdf_model,
+            'make_folder': make_folder
+        })
         global_callback('completed')
         
         # self.is_running = True
@@ -186,6 +214,56 @@ class PdfBatchProcessor:
         # self.current_index = 0
         # _process_next(0)
     
+    def cancel(self):
+        """Cancel batch processing"""
+        self.is_cancelled = True
+        self.processor.is_cancelled = True
+        
+    def reset(self):
+        """Reset flags"""
+        self.is_cancelled = False
+        self.processor.is_cancelled = False
+        self.converted_files.clear()
+
+    def cleanup_converted_files(self):
+        """Delete all converted files/folders from this batch"""
+        import shutil
+        
+        deleted_count = 0
+        for item in self.converted_files:
+            try:
+                pdf_model = item['model']
+                make_folder = item['make_folder']
+                
+                pdf_path = pdf_model.file_path
+                base_name = os.path.basename(pdf_path).replace(".pdf", "")
+                pdf_dir = os.path.dirname(pdf_path)
+                
+                if make_folder:
+                    output_dir = os.path.join(pdf_dir, base_name)
+                    # Delete entire folder
+                    if os.path.exists(output_dir) and os.path.isdir(output_dir):
+                        shutil.rmtree(output_dir)
+                        deleted_count += 1
+                        print(f"[CLEANUP] Deleted folder: {output_dir}")
+                else:
+                    # Delete individual image files
+                    base_name = os.path.basename(pdf_model.file_path).replace(".pdf", "")
+                    pdf_dir = os.path.dirname(pdf_model.file_path)
+                    
+                    for file in os.listdir(pdf_dir):
+                        if file.startswith(base_name) and file.endswith(".jpg"):
+                            file_path = os.path.join(pdf_dir, file)
+                            os.remove(file_path)
+                            deleted_count += 1
+                            print(f"[CLEANUP] Deleted file: {file_path}")
+            
+            except Exception as e:
+                logging.error(f"[CLEANUP] Error deleting: {e}")
+        
+        print(f"[CLEANUP] Total deleted: {deleted_count} items")
+        self.converted_files.clear()
+        
     # def pause_all(self):
     #     """Pause all processing"""
     #     self.is_paused = True

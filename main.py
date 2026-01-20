@@ -241,7 +241,7 @@ class App(ctk.CTk):
         self.update_idletasks()
 
 if __name__ == "__main__":
-    logging.info("[Logger] Logging Initiate")
+    # logging.info("[Logger] Logging Initiate")
     init_db()
     app = App()
     app.mainloop()
