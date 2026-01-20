@@ -11,6 +11,7 @@ general.template_awl_report = template/excel/template_awl_report.xlsx
 general.pendidikan_option = SMA,SMK,STM,SMU,Paket-C,SMP,SD,D3,S1,S2,S3
 general.sertifikasi_option = BNSP,CEPU,IADC
 
+general.pdfconverter_dpi = 200
 
 # =========================
 # TEMPLATE CONFIG

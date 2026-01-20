@@ -675,7 +675,7 @@ class ExportDialog(ctk.CTkToplevel):
             pythoncom.CoInitialize()
             try:
                 # Update progress
-                self.after(0, lambda: self.update_global_progress(0.2))
+                self.after(0, lambda: self._on_global_progress(0.2))
                 
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 data_peserta = []
@@ -740,7 +740,7 @@ class ExportDialog(ctk.CTkToplevel):
             import pythoncom
             pythoncom.CoInitialize()
             try:
-                self.after(0, lambda: self.update_global_progress(0.2))
+                self.after(0, lambda: self._on_global_progress(0.2))
                 
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 data_peserta = []

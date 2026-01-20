@@ -4,7 +4,8 @@
 
 import os, sys, time, logging
 import threading
-from typing import Callable, Optional
+from typing import Optional
+from config import PDFCONVERTER_DPI
 
     
 def setup_dependencies():
@@ -91,7 +92,7 @@ class PdfProcessor:
                     return False
                 
                 page = doc.load_page(page_num)
-                pix = page.get_pixmap(dpi=200)
+                pix = page.get_pixmap(dpi=int(PDFCONVERTER_DPI))
                 
                 output_filename = f"{base_name} - page {page_num + 1}.jpg"
                 output_path = os.path.join(output_dir, output_filename)
@@ -151,6 +152,7 @@ class PdfBatchProcessor:
         # self.processors = {} 
         self.processor = PdfProcessor()
         self.is_cancelled = False
+        self.cleaned = False
         self.converted_files = []
         
     def process_all(
@@ -160,6 +162,7 @@ class PdfBatchProcessor:
         single_callback,  
         global_callback
     ):
+        self.cleaned = False
         self.converted_files.clear()
         # def _process_next(index: int):
         #     if index >= len(pdf_models) or self.is_paused:
@@ -196,6 +199,11 @@ class PdfBatchProcessor:
 
             self.processor.is_cancelled = False
             
+            self.converted_files.append({
+                'model': pdf_model,
+                'make_folder': make_folder
+            })
+                
             result = self.processor.process_pdf(pdf_model, make_folder, single_callback)
             
             if not result:
@@ -203,10 +211,7 @@ class PdfBatchProcessor:
                     global_callback('error')
                 return
         
-        self.converted_files.append({
-            'model': pdf_model,
-            'make_folder': make_folder
-        })
+        
         global_callback('completed')
         
         # self.is_running = True
@@ -263,6 +268,7 @@ class PdfBatchProcessor:
         
         print(f"[CLEANUP] Total deleted: {deleted_count} items")
         self.converted_files.clear()
+        self.cleaned = True
         
     # def pause_all(self):
     #     """Pause all processing"""

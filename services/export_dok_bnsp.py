@@ -270,7 +270,7 @@ class DokBNSPBatchProcessor:
                 #         continue
                 if not result:
                     if callback_global:
-                        callback_global('error', None)
+                        callback_global('error')
                     return
 
             except Exception as e:
@@ -284,7 +284,7 @@ class DokBNSPBatchProcessor:
                 return 
             
         if callback_global:
-            callback_global('completed', None)
+            callback_global('completed')
         return 
             
     def cleanup(self):

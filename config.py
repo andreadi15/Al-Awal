@@ -16,6 +16,9 @@ DEBUG = True
 EMAIL = CONFIG['general']['email']
 NAMA_PERUSAHAAN = CONFIG['general']['nama_perusahaan']
 LOKASI_PERUSAHAAN = CONFIG['general']['lokasi_perusahaan']
+
+PDFCONVERTER_DPI = CONFIG['general']['pdfconverter_dpi']
+
 TEMPLATE_DOK_BNSP = CONFIG['template']
 TEMPLATE_BASE = CONFIG['general']['template_base'].replace("/","\\")
 TEMPLATE_AWL_REPORT = CONFIG['general']['template_awl_report'].replace("/","\\")

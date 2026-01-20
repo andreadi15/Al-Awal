@@ -8,6 +8,7 @@ import os, logging
 from models.pdf_model import PdfFileModel
 from services.pdf_service import PdfProcessor, PdfBatchProcessor
 from threading import Thread
+from config import PDFCONVERTER_DPI
 
 class Pdf2ImagePage(ctk.CTkFrame):
     def __init__(self, parent):
@@ -57,7 +58,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # Description
         desc = ctk.CTkLabel(
             header_frame,
-            text="Convert PDF pages to high-quality JPG images (200 DPI)",
+            text=f"Convert PDF pages to high-quality JPG images ({PDFCONVERTER_DPI} DPI)",
             font=("Arial", 13),
             text_color="#e3f2fd"
         )
@@ -176,12 +177,12 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # Will pack when files are added
         
         # Global progress container
-        progress_container = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
-        progress_container.pack(side="left", fill="x", expand=True, padx=20, pady=15)
+        self.global_progress_container = ctk.CTkFrame(self.footer_frame, fg_color="transparent")
+        self.global_progress_container.pack(side="left", fill="x", expand=True, padx=20, pady=15)
         
         # Progress label
         self.global_progress_label = ctk.CTkLabel(
-            progress_container,
+            self.global_progress_container,
             text="Ready to process 0 files",
             font=("Arial", 13, "bold"),
             text_color="#ffffff"
@@ -190,13 +191,13 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         # Progress bar
         self.global_progress_bar = ctk.CTkProgressBar(
-            progress_container,
+            self.global_progress_container,
             height=25,
             corner_radius=8,
             fg_color="#333333",
             progress_color="#1a73e8"
         )
-        self.global_progress_bar.pack(fill="x")
+        self.global_progress_bar.pack_forget()
         self.global_progress_bar.set(0)
         
         # Run All / Pause All button
@@ -283,7 +284,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
         """Refresh the file list display"""
         # Clear existing rows
         for widget in self.file_list_scroll.winfo_children():
-            widget.destroy()
+            if widget != self.empty_state:
+                widget.destroy()
         
         self.file_rows.clear()
         
@@ -319,7 +321,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
             
             # Update label
             self.global_progress_label.configure(
-                text=f"Ready to process {len(self.pdf_files)} file(s)"
+                text=f"Ready to process {len(self.pdf_files)} files"
             )
             self.global_progress_bar.set(0)
         else:
@@ -374,8 +376,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
             
             # Column 2: Filename (truncated)
             filename = pdf_model.file_name
-            if len(filename) > 30:
-                display_name = filename[:27] + "..."
+            if len(filename) > 20:
+                display_name = filename[:20] + "..."
             else:
                 display_name = filename
             
@@ -455,6 +457,11 @@ class Pdf2ImagePage(ctk.CTkFrame):
     def start_single_processing(self, index: int, pdf_model: PdfFileModel):
         """Start processing single file"""
         # row_widget = self.file_rows[pdf_model.file_id]
+        self.global_progress_bar.pack_forget()
+        self.global_progress_label.configure(
+            text=f"Ready to process {len(self.pdf_files)} files"
+        )
+        
         index = next((i for i, f in enumerate(self.pdf_files) if f.file_id == pdf_model.file_id),None)
         
         print(f"[DEBUG] Starting processing for index {index + 1}")
@@ -529,8 +536,6 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 model._progress_label.configure(text=f"{int(progress)}%")
                 break
         
-        
-    
     def _on_row_completed(self, model):
         """Handle file completion"""
         # if file_id >= len(self.file_rows):
@@ -542,6 +547,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # Update UI
         model._progress_bar.configure(progress_color="#34a853")
         model._progress_bar.set(1.0)
+        model._run_btn.configure(state="normal",fg_color="#34a853",text="▶️ Run")
         # row_widget._progress_label.configure(text="✓ 100%", text_color="#34a853")
         # row_widget._action_btn.configure(
         #     text="✓ Done",
@@ -614,14 +620,17 @@ class Pdf2ImagePage(ctk.CTkFrame):
         self.global_progress_label.configure(
             text=f"Processing 0/{len(self.pdf_files)} files (0%)"
         )
+        self.global_progress_bar.pack(fill="x")
         self.global_progress_bar.set(0)
         
         for pdf_model in self.pdf_files:
             # row_frame = self.peserta_rows[pdf_model.file_id]
             # row_frame.grid_columnconfigure(3, weight=0, minsize=200)
                                     
+            pdf_model._progress_label.configure(text=f"0%")
             pdf_model._progress_label.pack(side="left", padx=(0, 10))
-            # pdf_model._progress_bar.configure(progress_color="#484848")
+            pdf_model._progress_bar.configure(progress_color="#484848")
+            pdf_model._progress_label.configure(text_color="#1a73e8")
             pdf_model._progress_bar.pack(side="left", fill="x", expand=True)
             pdf_model._progress_bar.set(0)
             pdf_model._status_label.destroy()
@@ -702,7 +711,9 @@ class Pdf2ImagePage(ctk.CTkFrame):
         self.current_batch_processor.cancel()
         
         # Cleanup converted files
-        self.current_batch_processor.cleanup_converted_files()
+        if self.current_batch_processor:
+            if not self.current_batch_processor.cleaned:
+                self.current_batch_processor.cleanup_converted_files()
         
         # Update all non-completed rows to cancelled (red)
         for pdf_model in self.pdf_files:
@@ -721,7 +732,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
             text="▶️ Run All",
             fg_color="#34a853",
             hover_color="#2d8e47",
-            command=self.run_all_files,
+            command=self.start_batch_processing,
             state="normal"
         )
 
@@ -744,7 +755,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         # Cleanup
         if self.current_batch_processor:
-            self.current_batch_processor.cleanup_converted_files()
+            if not self.current_batch_processor.cleaned:
+                self.current_batch_processor.cleanup_converted_files()
         
         self.global_progress_bar.configure(progress_color="#d32f2f")
         self.global_progress_label.configure(text="❌ Batch cancelled - Files cleaned up")
@@ -753,7 +765,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
             text="▶️ Run All",
             fg_color="#34a853",
             hover_color="#2d8e47",
-            command=self.run_all_files,
+            command=self.start_batch_processing,
             state="normal"
         )
         
@@ -887,7 +899,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
     
         # Cleanup converted files on error
         if self.current_batch_processor:
-            self.current_batch_processor.cleanup_converted_files()
+            if not self.current_batch_processor.cleaned:
+                self.current_batch_processor.cleanup_converted_files()
         
         self.global_progress_bar.configure(progress_color="#d32f2f")
         self.global_progress_label.configure(text="❌ Error - Converted files deleted")
