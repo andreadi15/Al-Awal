@@ -8,3 +8,35 @@
 2026-01-19 21:42:12 | WARNING | Err -> DokBNSPSingleProcessor.process() got an unexpected keyword argument 'callback_progress'
 2026-01-19 21:42:31 | WARNING | [Error] Batch Processor -> ExportDialog.export_dokumen_bnsp.<locals>.export_thread.<locals>.on_single_status() missing 1 required positional argument: 'progress'
 2026-01-19 21:42:31 | WARNING | Err -> ExportDialog.export_dokumen_bnsp.<locals>.export_thread.<locals>.on_single_status() missing 1 required positional argument: 'progress'
+2026-01-19 22:40:12 | ERROR | Fatal Err ->
+DokBNSPSingleProcessor.process() got an unexpected keyword argument 'callback_progress'
+Traceback (most recent call last):
+  File "c:\Users\asus\Desktop\apa_ajadah\components\export_dialog.py", line 464, in export_thread
+    exporter.process(
+TypeError: DokBNSPSingleProcessor.process() got an unexpected keyword argument 'callback_progress'
+2026-01-19 22:45:12 | INFO | [Logger] Logging Initiate
+2026-01-19 22:50:59 | INFO | [Logger] Logging Initiate
+2026-01-19 23:05:28 | INFO | [Logger] Logging Initiate
+2026-01-19 23:10:42 | INFO | [Logger] Logging Initiate
+2026-01-19 23:27:10 | INFO | [Logger] Logging Initiate
+2026-01-19 23:28:25 | INFO | [Logger] Logging Initiate
+2026-01-19 23:34:36 | INFO | [Logger] Logging Initiate
+2026-01-19 23:36:55 | INFO | [Logger] Logging Initiate
+2026-01-19 23:45:59 | INFO | [Logger] Logging Initiate
+2026-01-19 23:48:42 | INFO | [Logger] Logging Initiate
+2026-01-19 23:53:13 | INFO | [Logger] Logging Initiate
+2026-01-19 23:56:26 | INFO | [Logger] Logging Initiate
+2026-01-19 23:57:50 | INFO | [Logger] Logging Initiate
+2026-01-19 23:59:52 | INFO | [Logger] Logging Initiate
+2026-01-20 00:06:01 | INFO | [Logger] Logging Initiate
+2026-01-20 00:06:32 | INFO | [Logger] Logging Initiate
+2026-01-20 00:07:07 | WARNING | Gagal generate dokumen -> (-2147352567, 'Exception occurred.', (0, 'Microsoft Word', 'Command failed', 'wdmain11.chm', 36966, -2146824090), None)
+2026-01-20 00:07:07 | WARNING | Generated Dokument Gagal
+2026-01-20 00:07:24 | INFO | [Logger] Logging Initiate
+2026-01-20 00:09:49 | INFO | [Logger] Logging Initiate
+2026-01-20 00:10:26 | WARNING | Gagal generate dokumen -> (-2147352567, 'Exception occurred.', (0, 'Microsoft Word', 'Command failed', 'wdmain11.chm', 36966, -2146824090), None)
+2026-01-20 00:10:26 | WARNING | Generated Dokument Gagal
+2026-01-20 00:13:24 | INFO | [Logger] Logging Initiate
+2026-01-20 00:15:16 | INFO | [Logger] Logging Initiate
+2026-01-20 00:16:35 | INFO | [Logger] Logging Initiate
+2026-01-20 00:17:29 | INFO | [Logger] Logging Initiate

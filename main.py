@@ -242,6 +242,7 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     AppLogger.setup()
+    logging.info("[Logger] Logging Initiate")
     init_db()
     app = App()
     app.mainloop()

@@ -4,10 +4,10 @@
 
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
-import os
+import os, logging
 from models.pdf_model import PdfFileModel
 from services.pdf_service import PdfProcessor, PdfBatchProcessor
-
+from threading import Thread
 
 class Pdf2ImagePage(ctk.CTkFrame):
     def __init__(self, parent):
@@ -16,11 +16,10 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # State
         self.pdf_files = []  # List[PdfFileModel]
         self.make_folder = True
-        self.batch_processor = PdfBatchProcessor()
         self.individual_processors = {}  # {index: PdfProcessor}
         
         # UI Components (will be created)
-        self.file_rows = []  # List of row widgets
+        self.file_rows = {}  # List of row widgets
         self.footer_frame = None
         self.global_progress_bar = None
         self.global_progress_label = None
@@ -278,12 +277,12 @@ class Pdf2ImagePage(ctk.CTkFrame):
     
     def run_all_files(self):
         """Run all files or pause all"""
-        if self.batch_processor.is_running:
-            # Pause all
-            self.pause_all_processing()
-        else:
+        # if self.batch_processor.is_running:
+        #     # Pause all
+        #     self.pause_all_processing()
+        # else:
             # Run all
-            self.start_batch_processing()
+        self.start_batch_processing()
     
     # ==========================================
     # UI UPDATE METHODS
@@ -317,9 +316,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
             self.clear_all_btn.pack(side="right", padx=20, pady=17)
             
             # Create rows
-            for index, pdf_model in enumerate(self.pdf_files):
-                row_widget = self.create_file_row(index, pdf_model)
-                self.file_rows.append(row_widget)
+            self.create_file_row(self.pdf_files)
+                
     
     def update_footer_visibility(self):
         """Show/hide footer based on file count"""
@@ -340,148 +338,155 @@ class Pdf2ImagePage(ctk.CTkFrame):
 # ==========================================
     # FILE ROW CREATION
     # ==========================================
-    def create_file_row(self, index: int, pdf_model: PdfFileModel):
+    def create_file_row(self, pdf_list):
         """
         Create single file row with all components
         
         Row structure:
         [No] [Icon] [Filename] [Progress Bar + %] [Run/Pause Button]
         """
-        # Main row container
-        row_frame = ctk.CTkFrame(
-            self.file_list_scroll,
-            fg_color="#2a2a2a" if index % 2 == 0 else "#333333",
-            height=70
-        )
-        row_frame.pack(fill="x", padx=5, pady=3)
-        row_frame.pack_propagate(False)
-        
-        # Configure grid
-        row_frame.grid_columnconfigure(0, weight=0, minsize=50)   # No
-        row_frame.grid_columnconfigure(1, weight=0, minsize=50)   # Icon
-        row_frame.grid_columnconfigure(2, weight=1, minsize=200)  # Filename
-        row_frame.grid_columnconfigure(3, weight=2, minsize=300)  # Progress
-        row_frame.grid_columnconfigure(4, weight=0, minsize=120)  # Button
-        
-        # Column 0: Number
-        no_label = ctk.CTkLabel(
-            row_frame,
-            text=str(index + 1),
-            font=("Arial", 14, "bold"),
-            text_color="#888888"
-        )
-        no_label.grid(row=0, column=0, padx=10, sticky="w")
-        
-        # Column 1: PDF Icon
-        icon_label = ctk.CTkLabel(
-            row_frame,
-            text="📄",
-            font=("Arial", 24)
-        )
-        icon_label.grid(row=0, column=1, padx=5, sticky="w")
-        
-        # Column 2: Filename (truncated)
-        filename = pdf_model.file_name
-        if len(filename) > 30:
-            display_name = filename[:27] + "..."
-        else:
-            display_name = filename
-        
-        name_label = ctk.CTkLabel(
-            row_frame,
-            text=display_name,
-            font=("Arial", 13),
-            text_color="#ffffff",
-            anchor="w"
-        )
-        name_label.grid(row=0, column=2, padx=10, sticky="w")
-        
-        # Column 3: Progress container
-        progress_container = ctk.CTkFrame(row_frame, fg_color="transparent")
-        progress_container.grid(row=0, column=3, padx=15, sticky="ew")
-        
-        # Progress percentage label (hidden initially)
-        progress_label = ctk.CTkLabel(
-            progress_container,
-            text="0%",
-            font=("Arial", 12, "bold"),
-            text_color="#1a73e8",
-            width=50
-        )
-        progress_label.pack(side="left", padx=(0, 10))
-        progress_label.pack_forget()  # Hide initially
-        
-        # Progress bar (hidden initially)
-        progress_bar = ctk.CTkProgressBar(
-            progress_container,
-            height=20,
-            corner_radius=8,
-            fg_color="#444444",
-            progress_color="#1a73e8"
-        )
-        progress_bar.pack(side="left", fill="x", expand=True)
-        progress_bar.set(0)
-        progress_bar.pack_forget()  # Hide initially
-        
-        # Status label (shown initially)
-        status_label = ctk.CTkLabel(
-            progress_container,
-            text=f"Ready • {pdf_model.total_pages} pages",
-            font=("Arial", 12),
-            text_color="#888888"
-        )
-        status_label.pack(side="left", fill="x", expand=True)
-        
-        # Column 4: Action button
-        action_btn = ctk.CTkButton(
-            row_frame,
-            text="▶️ Run",
-            font=("Arial", 13, "bold"),
-            fg_color="#34a853",
-            hover_color="#2d8e47",
-            height=40,
-            width=100,
-            corner_radius=8,
-            command=lambda: self.run_single_file(index)
-        )
-        action_btn.grid(row=0, column=4, padx=10)
-        
-        # Store references
-        row_frame._index = index
-        row_frame._progress_bar = progress_bar
-        row_frame._progress_label = progress_label
-        row_frame._status_label = status_label
-        row_frame._action_btn = action_btn
-        
-        return row_frame
+        for index, pdf_model in enumerate(pdf_list):
+            pdf_model: PdfFileModel
+
+            row_frame = ctk.CTkFrame(
+                self.file_list_scroll,
+                fg_color="#2a2a2a" , #if index % 2 == 0 else "#333333"
+                height=70
+            )
+            row_frame.pack(fill="x", padx=5, pady=3)
+            row_frame.pack_propagate(False)
+            
+            # Configure grid
+            row_frame.grid_columnconfigure(0, weight=0, minsize=50)   # No
+            row_frame.grid_columnconfigure(1, weight=0, minsize=50)   # Icon
+            row_frame.grid_columnconfigure(2, weight=1, minsize=200)  # Filename
+            row_frame.grid_columnconfigure(3, weight=2, minsize=300)  # Progress
+            row_frame.grid_columnconfigure(4, weight=0, minsize=120)  # Button
+            
+            index = next((i for i, f in enumerate(self.pdf_files) if f.file_id == pdf_model.file_id),None)
+            
+            # Column 0: Number
+            no_label = ctk.CTkLabel(
+                row_frame,
+                text=str(index + 1),
+                font=("Arial", 14, "bold"),
+                text_color="#888888"
+            )
+            no_label.grid(row=0, column=0, padx=10, sticky="w")
+            
+            # Column 1: PDF Icon
+            icon_label = ctk.CTkLabel(
+                row_frame,
+                text="📄",
+                font=("Arial", 24)
+            )
+            icon_label.grid(row=0, column=1, padx=5, sticky="w")
+            
+            # Column 2: Filename (truncated)
+            filename = pdf_model.file_name
+            if len(filename) > 30:
+                display_name = filename[:27] + "..."
+            else:
+                display_name = filename
+            
+            name_label = ctk.CTkLabel(
+                row_frame,
+                text=display_name,
+                font=("Arial", 13),
+                text_color="#ffffff",
+                anchor="w"
+            )
+            name_label.grid(row=0, column=2, padx=10, sticky="w")
+            
+            # Column 3: Progress container
+            progress_container = ctk.CTkFrame(row_frame, fg_color="transparent")
+            progress_container.grid(row=0, column=3, padx=15, sticky="ew")
+            
+            # Progress percentage label (hidden initially)
+            progress_label = ctk.CTkLabel(
+                progress_container,
+                text="0%",
+                font=("Arial", 12, "bold"),
+                text_color="#1a73e8",
+                width=50
+            )
+            progress_label.pack(side="left", padx=(0, 10))
+            progress_label.pack_forget()  # Hide initially
+            
+            # Progress bar (hidden initially)
+            progress_bar = ctk.CTkProgressBar(
+                progress_container,
+                height=20,
+                corner_radius=8,
+                fg_color="#444444",
+                progress_color="#1a73e8"
+            )
+            progress_bar.pack(side="left", fill="x", expand=True)
+            progress_bar.set(0)
+            progress_bar.pack_forget()  # Hide initially
+            
+            # Status label (shown initially)
+            status_label = ctk.CTkLabel(
+                progress_container,
+                text=f"Ready • {pdf_model.total_pages} pages",
+                font=("Arial", 12),
+                text_color="#888888"
+            )
+            status_label.pack(side="left", fill="x", expand=True)
+            
+            # Column 4: Action button
+            run_btn = ctk.CTkButton(
+                row_frame,
+                text="▶️ Run",
+                font=("Arial", 13, "bold"),
+                fg_color="#34a853",
+                hover_color="#2d8e47",
+                height=40,
+                width=100,
+                corner_radius=8,
+                command=lambda: self.run_single_file(index)
+            )
+            run_btn.grid(row=0, column=4, padx=10)
+            
+            # Store references
+            
+            pdf_model._index = index
+            pdf_model._progress_bar = progress_bar
+            pdf_model._progress_label = progress_label
+            pdf_model._status_label = status_label
+            pdf_model._run_btn = run_btn
+            
+            self.file_rows[pdf_model.file_id] = row_frame
     
     # ==========================================
     # INDIVIDUAL FILE PROCESSING
     # ==========================================
-    def run_single_file(self, index: int):
+    def run_single_file(self, file_id: str):
         """Run or pause single file processing"""
-        pdf_model = self.pdf_files[index]
-        row_widget = self.file_rows[index]
+        # pdf_model = self.pdf_files[file_id]
+        # row_widget = self.file_rows[file_id]
         # Check if currently processing
-        if pdf_model.status == "processing":
-            # Pause this file
-            self.pause_single_file(index)
-        elif pdf_model.status == "paused":
-            # Skip paused files (cannot resume in this implementation)
-            messagebox.showinfo("Info", "Paused files cannot be resumed. Please clear and re-add the file.")
-        elif pdf_model.status == "completed":
-            # Reset and re-run
-            if messagebox.askyesno("Confirm", "This file is already completed. Re-run?"):
-                pdf_model.reset()
-                self.start_single_processing(index)
-        else:
+        # if pdf_model.status == "processing":
+        #     # Pause this file
+        #     self.pause_single_file(index)
+        # elif pdf_model.status == "paused":
+        #     # Skip paused files (cannot resume in this implementation)
+        #     messagebox.showinfo("Info", "Paused files cannot be resumed. Please clear and re-add the file.")
+        # elif pdf_model.status == "completed":
+        #     # Reset and re-run
+        #     if messagebox.askyesno("Confirm", "This file is already completed. Re-run?"):
+        #         pdf_model.reset()
+        #         self.start_single_processing(index)
+        # else:
             # Start processing
-            self.start_single_processing(index)
+        self.start_single_processing(file_id)
     
-    def start_single_processing(self, index: int):
+    def start_single_processing(self, file_id: str):
         """Start processing single file"""
-        pdf_model = self.pdf_files[index]
-        row_widget = self.file_rows[index]
+        pdf_model: PdfFileModel = self.pdf_files[file_id]
+        row_widget = self.file_rows[file_id]
+        
+        index = next((i for i, f in enumerate(self.pdf_files) if f.file_id == pdf_model.file_id),None)
         
         print(f"[DEBUG] Starting processing for index {index}")
         print(f"[DEBUG] File path: {pdf_model.file_path}")
@@ -495,102 +500,95 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         # Create processor
         processor = PdfProcessor()
-        self.individual_processors[index] = processor
+        # self.individual_processors[index] = processor
         
         # Define callbacks
-        def on_progress(current_page, total_pages):
-            print(f"[DEBUG] Progress: {current_page}/{total_pages}")  # ← TAMBAH
-            progress = (current_page / total_pages) * 100
-            pdf_model.update_progress(current_page)
-            
-            self.after(0, lambda idx=index, prog=progress, curr=current_page, tot=total_pages: 
-                self._update_row_progress(idx, prog, curr, tot))
-        
-        def on_complete(success, message):
-            print(f"[DEBUG] Complete: success={success}, message={message}")  # ← TAMBAH
-            if success:
-                pdf_model.set_completed()
-                self.after(0, lambda idx=index: self._on_file_completed(idx, success=True))
-            else:
-                if "Paused" in message:
-                    pdf_model.status = "paused"
-                    self.after(0, lambda idx=index: self._on_file_paused(idx))
-                else:
-                    pdf_model.set_error(message)
-                    self.after(0, lambda idx=index, msg=message: self._on_file_error(idx, msg))
+        def on_single_status(file_id, status, progress=None):
+            match status:
+                case s if 'running' in s:
+                    # self.after(0, pdf_model.update_progress(progress))                    
+                    self.after(0, lambda id=file_id, prog=progress: self._update_row_progress(id, prog))
+                    
+                case s if 'completed' in s:
+                    # pdf_model.set_completed()
+                    self.after(0, lambda id=file_id: self._on_row_completed(id))
+
+                case s if 'error' in s:
+                    # pdf_model.set_error(message)
+                    self.after(0, lambda id=file_id: self._on_row_error(id))                 
         
         # Start processing
-        pdf_model.status = "processing"
+        # pdf_model.status = "processing"
         print(f"[DEBUG] Calling processor.process_pdf()...")  # ← TAMBAH
-        processor.process_pdf(pdf_model, self.make_folder, on_progress, on_complete)
+        processor.process_pdf(pdf_model, self.make_folder, on_single_status)
         print(f"[DEBUG] processor.process_pdf() called")  # ← TAMBAH
     
-    def pause_single_file(self, index: int):
-        """Pause single file processing"""
-        pdf_model = self.pdf_files[index]
-        processor = self.individual_processors.get(index)
+    # def pause_single_file(self, index: int):
+    #     """Pause single file processing"""
+    #     pdf_model = self.pdf_files[index]
+    #     processor = self.individual_processors.get(index)
         
-        if processor:
-            processor.pause()
-            pdf_model.status = "paused"
+    #     if processor:
+    #         processor.pause()
+    #         pdf_model.status = "paused"
     
-    def _update_row_progress(self, index: int, progress: float, current_page: int, total_pages: int):
+    def _update_row_progress(self, file_id: str, progress):
         """Update row progress bar and label"""
-        if index >= len(self.file_rows):
-            return
+        # if index >= len(self.file_rows):
+        #     return
         
-        row_widget = self.file_rows[index]
+        row_widget = self.file_rows[file_id]
         row_widget._progress_bar.set(progress / 100)
         row_widget._progress_label.configure(text=f"{int(progress)}%")
     
-    def _on_file_completed(self, index: int, success: bool):
+    def _on_row_completed(self, file_id: str):
         """Handle file completion"""
-        if index >= len(self.file_rows):
-            return
+        # if file_id >= len(self.file_rows):
+        #     return
         
-        row_widget = self.file_rows[index]
-        pdf_model = self.pdf_files[index]
+        row_widget = self.file_rows[file_id]
+        # pdf_model = self.pdf_files[file_id]
         
         # Update UI
         row_widget._progress_bar.configure(progress_color="#34a853")
         row_widget._progress_bar.set(1.0)
-        row_widget._progress_label.configure(text="✓ 100%", text_color="#34a853")
-        row_widget._action_btn.configure(
-            text="✓ Done",
-            fg_color="#555555",
-            state="disabled"
-        )
+        # row_widget._progress_label.configure(text="✓ 100%", text_color="#34a853")
+        # row_widget._action_btn.configure(
+        #     text="✓ Done",
+        #     fg_color="#555555",
+        #     state="disabled"
+        # )
     
-    def _on_file_paused(self, index: int):
-        """Handle file paused"""
-        if index >= len(self.file_rows):
-            return
+    # # def _on_file_paused(self, index: int):
+    #     """Handle file paused"""
+    #     if index >= len(self.file_rows):
+    #         return
         
-        row_widget = self.file_rows[index]
+    #     row_widget = self.file_rows[index]
         
-        # Update UI - RED progress bar
-        row_widget._progress_bar.configure(progress_color="#d32f2f")
-        row_widget._action_btn.configure(
-            text="⏸️ Paused",
-            fg_color="#d32f2f",
-            state="disabled"
-        )
+    #     # Update UI - RED progress bar
+    #     row_widget._progress_bar.configure(progress_color="#d32f2f")
+    #     row_widget._action_btn.configure(
+    #         text="⏸️ Paused",
+    #         fg_color="#d32f2f",
+    #         state="disabled"
+    #     )
     
-    def _on_file_error(self, index: int, error_msg: str):
+    def _on_row_error(self, file_id: str):
         """Handle file error"""
-        if index >= len(self.file_rows):
-            return
+        # if index >= len(self.file_rows):
+        #     return
         
-        row_widget = self.file_rows[index]
+        row_widget = self.file_rows[file_id]
         
         # Update UI
         row_widget._progress_bar.configure(progress_color="#d32f2f")
-        row_widget._status_label.configure(text=f"❌ Error: {error_msg[:30]}")
-        row_widget._action_btn.configure(
-            text="❌ Error",
-            fg_color="#d32f2f",
-            state="disabled"
-        )
+        # row_widget._status_label.configure(text=f"❌ Error: {error_msg[:30]}")
+        # row_widget._action_btn.configure(
+        #     text="❌ Error",
+        #     fg_color="#d32f2f",
+        #     state="disabled"
+        # )
 
 
 # ==========================================
@@ -609,13 +607,13 @@ class Pdf2ImagePage(ctk.CTkFrame):
             return
         
         # Reset all idle files
-        for pdf_model in self.pdf_files:
-            if pdf_model.status == "idle":
-                pdf_model.reset()
+        # for pdf_model in self.pdf_files:
+        #     if pdf_model.status == "idle":
+        #         pdf_model.reset()
         
         # Update Run All button
         self.run_all_btn.configure(
-            text="⏸️ Pause All",
+            text="⏸❌ Cancel",
             fg_color="#ff9800",
             hover_color="#f57c00"
         )
@@ -626,100 +624,134 @@ class Pdf2ImagePage(ctk.CTkFrame):
         )
         self.global_progress_bar.set(0)
         
-        # Define callbacks
-        def on_file_progress(file_index, current_page, total_pages):
-            """Update individual file progress"""
-            progress = (current_page / total_pages) * 100
-            pdf_model = self.pdf_files[file_index]
-            pdf_model.update_progress(current_page)
-            
-            self.after(0, lambda idx=file_index, prog=progress, curr=current_page, tot=total_pages: 
-            self._update_row_progress(idx, prog, curr, tot))
+        for pdf_model in self.pdf_files:
+            # row_frame = self.peserta_rows[pdf_model.file_id]
+            # row_frame.grid_columnconfigure(3, weight=0, minsize=200)
+                                       
+            pdf_model._progress_bar.pack(side="left", fill="x", expand=True)
+            pdf_model._progress_bar.set(0)
+            pdf_model._status_label.destroy()
+            pdf_model._progress_bar.configure(progress_color="#484848")
+            pdf_model._run_btn.configure(state="disabled", fg_color="#666666")
         
-        def on_global_progress(completed_files, total_files):
-            """Update global progress bar"""
-            progress = (completed_files / total_files) * 100
-            
-            self.after(0, lambda comp=completed_files, tot=total_files, prog=progress: 
-               self._update_global_progress(comp, tot, prog))
+        batch_processor = PdfBatchProcessor()
+        def process_thread():
+            try:
+                progress_map = {f.file_index: 0 for f in self.pdf_files}
+                completed_count = 0
+                total_files = len(self.pdf_files)
+                def on_single_status(file_id, status, progress=None):
+                    nonlocal completed_count
+                    match status:
+                        case s if 'running' in s:
+                            progress_map[file_id] = progress
+                        
+                            self.after(0, lambda id=file_id, prog=progress: self._update_row_progress(id, prog))
+                            
+                            total_progress = sum(progress_map.values())
+                            avg_progress = total_progress / (total_files * 100)  
+                            self.after(0, lambda avg=avg_progress: self._on_global_progress(avg))
+
+                        case s if 'completed' in s:
+                            completed_count += 1
+                            progress_map[file_id] = 100  
+                            
+                            self.after(0, lambda id=file_id: self._on_row_completed(id))
+                            
+                            avg_progress = sum(progress_map.values()) / (total_files * 100)
+                            self.after(0, lambda avg=avg_progress: self._on_global_progress(avg))
+
+                        case s if 'error' in s:
+                            self.after(0,lambda id=file_id: self._on_row_error(id))
+                
+                def on_global_status(status):
+                    match status:
+                        case s if 'completed' in s:
+                            self.after(0, lambda: self._on_global_progress(1.0))
+                            self.after(300, lambda: self._on_global_completed())
+
+                        case s if 'error' in s:
+                            # self.after(0, self.reset_progress)
+                            self.after(0, lambda: self._on_global_error(None))
+                
+                # Start batch processing
+                batch_processor.process_all(
+                    self.pdf_files,
+                    self.make_folder,
+                    on_single_status,
+                    on_global_status
+                )
+                
+                # Update UI for all files
+                # for index, pdf_model in enumerate(self.pdf_files):
+                #     if pdf_model.status == "idle":
+                #         self._prepare_row_for_processing(index)
+            except Exception as e:
+                self.after(0, lambda: self._on_global_error(str(e)))
+                
+        thread = Thread(target=process_thread, daemon=True)
+        thread.start()
         
-        def on_all_complete(success_count, total_count):
-            """Handle all files completed"""
-            self.after(0, lambda succ=success_count, tot=total_count: 
-               self._on_batch_completed(succ, tot))
         
-        # Start batch processing
-        self.batch_processor.process_all(
-            self.pdf_files,
-            self.make_folder,
-            on_file_progress,
-            on_global_progress,
-            on_all_complete
-        )
-        
-        # Update UI for all files
-        for index, pdf_model in enumerate(self.pdf_files):
-            if pdf_model.status == "idle":
-                self._prepare_row_for_processing(index)
     
-    def pause_all_processing(self):
-        """Pause all processing"""
-        if not self.batch_processor.is_running:
-            return
+    # # def pause_all_processing(self):
+    #     """Pause all processing"""
+    #     if not self.batch_processor.is_running:
+    #         return
         
-        # Pause batch processor
-        self.batch_processor.pause_all()
+    #     # Pause batch processor
+    #     self.batch_processor.pause_all()
         
-        # Update UI
-        for index, pdf_model in enumerate(self.pdf_files):
-            if pdf_model.status == "processing":
-                # Mark as paused and turn RED
-                pdf_model.status = "paused"
-                self._on_file_paused(index)
-            elif pdf_model.status == "idle":
-                # Idle files: increment global progress by 1
-                # (simulate as "skipped")
-                pass
+    #     # Update UI
+    #     for index, pdf_model in enumerate(self.pdf_files):
+    #         if pdf_model.status == "processing":
+    #             # Mark as paused and turn RED
+    #             pdf_model.status = "paused"
+    #             self._on_file_paused(index)
+    #         elif pdf_model.status == "idle":
+    #             # Idle files: increment global progress by 1
+    #             # (simulate as "skipped")
+    #             pass
         
-        # Update Run All button
-        self.run_all_btn.configure(
-            text="▶️ Run All",
-            fg_color="#34a853",
-            hover_color="#2d8e47"
-        )
+    #     # Update Run All button
+    #     self.run_all_btn.configure(
+    #         text="▶️ Run All",
+    #         fg_color="#34a853",
+    #         hover_color="#2d8e47"
+    #     )
         
-        # Set global progress to 100% when Pause All is clicked
-        self.global_progress_bar.set(1.0)
-        self.global_progress_label.configure(
-            text="⏸️ Processing paused"
-        )
+    #     # Set global progress to 100% when Pause All is clicked
+    #     self.global_progress_bar.set(1.0)
+    #     self.global_progress_label.configure(
+    #         text="⏸️ Processing paused"
+    #     )
         
-        messagebox.showinfo("Paused", "All processing has been paused")
+    #     messagebox.showinfo("Paused", "All processing has been paused")
     
-    def _prepare_row_for_processing(self, index: int):
-        """Prepare row UI for processing state"""
-        if index >= len(self.file_rows):
-            return
+    # # def _prepare_row_for_processing(self, index: int):
+    #     """Prepare row UI for processing state"""
+    #     if index >= len(self.file_rows):
+    #         return
         
-        row_widget = self.file_rows[index]
+    #     row_widget = self.file_rows[index]
         
-        # Show progress bar
-        row_widget._status_label.pack_forget()
-        row_widget._progress_label.pack(side="left", padx=(0, 10))
-        row_widget._progress_bar.pack(side="left", fill="x", expand=True)
-        row_widget._progress_bar.set(0)
-        row_widget._progress_label.configure(text="0%", text_color="#1a73e8")
-        row_widget._progress_bar.configure(progress_color="#1a73e8")
+    #     # Show progress bar
+    #     row_widget._status_label.pack_forget()
+    #     row_widget._progress_label.pack(side="left", padx=(0, 10))
+    #     row_widget._progress_bar.pack(side="left", fill="x", expand=True)
+    #     row_widget._progress_bar.set(0)
+    #     row_widget._progress_label.configure(text="0%", text_color="#1a73e8")
+    #     row_widget._progress_bar.configure(progress_color="#1a73e8")
         
-        # Update button
-        row_widget._action_btn.configure(
-            text="⏸️ Pause",
-            fg_color="#ff9800",
-            state="normal",
-            command=lambda idx=index: self.pause_single_file(idx)
-        )
+    #     # Update button
+    #     row_widget._action_btn.configure(
+    #         text="⏸️ Pause",
+    #         fg_color="#ff9800",
+    #         state="normal",
+    #         command=lambda idx=index: self.pause_single_file(idx)
+    #     )
     
-    def _update_global_progress(self, completed: int, total: int, progress: float):
+    def _on_global_progress(self, completed: int, total: int, progress: float):
         """Update global progress bar and label"""
         self.global_progress_bar.set(progress / 100)
         
@@ -735,22 +767,23 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 text=f"Completed {completed}/{total} files (100%)"
             )
     
-    def _on_batch_completed(self, success_count: int, total_count: int):
+    def _on_global_completed(self):
         """Handle batch processing completion"""
         # Update global progress
         self.global_progress_bar.set(1.0)
+        self.global_progress_bar.configure(progress_color="#34a853")
         
-        # Count statuses
-        completed = sum(1 for p in self.pdf_files if p.status == "completed")
-        paused = sum(1 for p in self.pdf_files if p.status == "paused")
-        error = sum(1 for p in self.pdf_files if p.status == "error")
+        # # Count statuses
+        completed = sum(self.pdf_files)
+        # paused = sum(1 for p in self.pdf_files if p.status == "paused")
+        # error = sum(1 for p in self.pdf_files if p.status == "error")
         
         # Update label
         status_text = f"✓ {completed} completed"
-        if paused > 0:
-            status_text += f" • ⏸️ {paused} paused"
-        if error > 0:
-            status_text += f" • ❌ {error} failed"
+        # if paused > 0:
+        #     status_text += f" • ⏸️ {paused} paused"
+        # if error > 0:
+        #     status_text += f" • ❌ {error} failed"
         
         self.global_progress_label.configure(text=status_text)
         
@@ -762,15 +795,21 @@ class Pdf2ImagePage(ctk.CTkFrame):
         )
         
         # Show completion message
-        message = f"Batch processing completed!\n\n"
-        message += f"✓ Success: {completed}\n"
-        if paused > 0:
-            message += f"⏸️ Paused: {paused}\n"
-        if error > 0:
-            message += f"❌ Failed: {error}\n"
+        # message = f"Batch processing completed!\n\n"
+        # message += f"✓ Success: {completed}\n"
+        # if paused > 0:
+        #     message += f"⏸️ Paused: {paused}\n"
+        # if error > 0:
+        #     message += f"❌ Failed: {error}\n"
         
         # messagebox.showinfo("Completed", message)
     
+    def _on_global_error(self, msg=None):
+        self.global_progress_bar.configure(progress_color="#db1717")
+        if msg:
+            logging.error(f"[Error] Export gagal! ->\n{msg}")
+            return
+        logging.error(f"[Error] !!Export gagal!!")
     # ==========================================
     # UTILITY METHODS
     # ==========================================

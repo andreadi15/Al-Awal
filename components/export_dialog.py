@@ -115,7 +115,7 @@ class ExportDialog(ctk.CTkToplevel):
         self.progress_label.pack(pady=(10, 2))
 
         # Progress bar with modern styling
-        self.progress_bar = ctk.CTkProgressBar(
+        self.global_progress_bar = ctk.CTkProgressBar(
             self.progress_frame,
             width=300,
             height=10,
@@ -123,8 +123,8 @@ class ExportDialog(ctk.CTkToplevel):
             fg_color="#333333",
             progress_color="#4caf50"
         )
-        self.progress_bar.pack(pady=(0, 10), padx=15)
-        self.progress_bar.set(0)
+        self.global_progress_bar.pack(pady=(0, 10), padx=15)
+        self.global_progress_bar.set(0)
 
         # Success message frame (shown after completion)
         self.success_frame = ctk.CTkFrame(self.status_container, fg_color="#1f1f1f", corner_radius=10)
@@ -177,7 +177,7 @@ class ExportDialog(ctk.CTkToplevel):
                     
     #                 # Execute update based on type
     #                 if update['type'] == 'row_progress':
-    #                     self._update_row_progress(
+    #                     self._on_row_progress(
     #                         update['peserta_id'],
     #                         update['progress']
     #                     )
@@ -437,7 +437,7 @@ class ExportDialog(ctk.CTkToplevel):
         # Update UI
         row_frame = self.peserta_rows[peserta.id_peserta]
         row_frame.grid_columnconfigure(3, weight=0, minsize=200)
-        peserta._progress_bar.configure(progress_color="#0017c2")
+        peserta._progress_bar.configure(progress_color="#484848")
         peserta._status_label.destroy()
         peserta._progress_bar.pack(side="right", padx=(8, 5))
         peserta._run_btn.configure(state="disabled", fg_color="#666666")
@@ -453,7 +453,7 @@ class ExportDialog(ctk.CTkToplevel):
                 def on_file_status(peserta_id, status, progress=None):
                     match status:
                         case s if 'running' in s:
-                            self.after(0,lambda id=peserta_id, prog=progress:self._update_row_progress(id, prog))
+                            self.after(0,lambda id=peserta_id, prog=progress:self._on_row_progress(id, prog))
 
                         case s if 'completed' in s:
                             self.after(0,lambda id=peserta_id:self._on_row_completed(id))
@@ -467,20 +467,26 @@ class ExportDialog(ctk.CTkToplevel):
                     peserta,  
                     self.selected_files[peserta.id_peserta],
                     OUTPUT_PATH,
-                    callback_progress=on_file_status
+                    on_file_status
                 )
                     
             except Exception as e:
-                logging.warning(f"Err -> {e}")
+                logging.exception(f"Fatal Err ->\n{e}")
                 self._on_row_error(peserta.id_peserta)
         
         threading.Thread(target=export_thread, daemon=True).start()
     
-    def _update_row_progress(self, peserta_id, value):
+    def _on_row_progress(self, peserta_id, value):
         """Update individual row progress"""
         for peserta in self.peserta_list:
             if peserta.id_peserta == peserta_id:
-                peserta._progress_bar.configure(progress_color="#0017c2")
+                if value >= 100:
+                    peserta._progress_bar.configure(progress_color="#4caf50")  # Green
+                elif value >= 50:
+                    peserta._progress_bar.configure(progress_color="#2196f3")  # Blue
+                else:
+                    peserta._progress_bar.configure(progress_color="#ff9800")  # Orange
+                    
                 peserta._progress_bar.set(value/100)
                 break
 
@@ -511,11 +517,75 @@ class ExportDialog(ctk.CTkToplevel):
             elif selected_format == "Dokumen BNSP":
                 self.export_dokumen_bnsp()
         except Exception as e:
+            logging.exception(f"Fatal Err ->\n{e}")
             self.after(10, lambda: messagebox.showerror(
                 "Error",
                 f"Gagal ekspor:\n{str(e)}"
             ))
+           
+    def _on_global_progress(self, value, show_status=True):
+        """
+        Update progress bar dan percentage label
+        
+        Args:
+            value (float): Progress value 0.0 - 1.0
+            show_status (bool): Show progress or hide after completion
+        """
+        # Show progress container if not visible
+        if not self.is_exporting:
+            self.show_progress()
+        
+        # Update progress bar
+        self.global_progress_bar.set(value)
+        
+        # Update percentage text
+        percentage = int(value * 100)
+        self.progress_label.configure(text=f"{percentage}%")
+        
+        # Color based on progress
+        if value >= 1.0:
+            self.global_progress_bar.configure(progress_color="#4caf50")  # Green
+            self.progress_label.configure(text_color="#4caf50")
+        elif value >= 0.5:
+            self.global_progress_bar.configure(progress_color="#2196f3")  # Blue
+            self.progress_label.configure(text_color="#ffffff")
+        else:
+            self.global_progress_bar.configure(progress_color="#ff9800")  # Orange
+            self.progress_label.configure(text_color="#ffffff")
+        
+        self.update_idletasks()
+        
+        # Auto hide after completion
+        if value >= 1.0 and not show_status:
+            self.after(1500, self.hide_progress)
             
+    def _on_global_completed(self):
+        """Show success message in center"""
+        # Hide progress
+        self.progress_frame.pack_forget()
+        
+        # # Extract filename from path
+        # folder_name = os.path.basename(output_path)
+        # parent_folder = os.path.dirname(output_path)
+        
+        # Update success message
+        # self.success_path.configure(text=f"📁 {folder_name}\n📂 {parent_folder}")
+        
+        # Show success frame
+        self.success_frame.pack(fill="both", expand=True)
+        
+        self.update_idletasks()
+        
+        # Auto hide and show export button after 4 seconds
+        # self.after(4000, self.hide_success_message)
+
+    def _on_global_error(self, msg=None):
+        self.global_progress_bar.configure(progress_color="#db1717")
+        if msg:
+            logging.error(f"[Error] Export gagal! ->\n{msg}")
+            return
+        logging.error(f"[Error] !!Export gagal!!")
+    
     
     # def animate_progress(self, target_value, label_text="", duration=500):
     #     """
@@ -526,7 +596,7 @@ class ExportDialog(ctk.CTkToplevel):
     #         label_text (str): Label text
     #         duration (int): Animation duration in ms
     #     """
-    #     current = self.progress_bar.get()
+    #     current = self.global_progress_bar.get()
     #     steps = 20
     #     increment = (target_value - current) / steps
     #     delay = duration // steps
@@ -565,9 +635,9 @@ class ExportDialog(ctk.CTkToplevel):
         self.success_frame.pack_forget()
         
         # Reset progress bar
-        self.progress_bar.set(0)
+        self.global_progress_bar.set(0)
         self.progress_label.configure(text="0%", text_color="#999999")
-        self.progress_bar.configure(progress_color="#4caf50")
+        self.global_progress_bar.configure(progress_color="#4caf50")
         
         # Reset exporting state
         self.is_exporting = False
@@ -577,29 +647,8 @@ class ExportDialog(ctk.CTkToplevel):
             self.export_btn.pack(side="right", padx=20)
         
         self.update_idletasks()
-        
-    def show_success(self):
-        """Show success message in center"""
-        # Hide progress
-        self.progress_frame.pack_forget()
-        
-        # # Extract filename from path
-        # folder_name = os.path.basename(output_path)
-        # parent_folder = os.path.dirname(output_path)
-        
-        # Update success message
-        # self.success_path.configure(text=f"📁 {folder_name}\n📂 {parent_folder}")
-        
-        # Show success frame
-        self.success_frame.pack(fill="both", expand=True)
-        
-        self.update_idletasks()
-        
-        # Auto hide and show export button after 4 seconds
-        # self.after(4000, self.hide_success_message)
 
-    def show_error(self, msg):
-        messagebox.showerror("Error", f"Gagal ekspor:\n{msg}")
+        
         
     # def hide_success_message(self):
     #     """Hide success message and restore export button"""
@@ -609,48 +658,14 @@ class ExportDialog(ctk.CTkToplevel):
     #     self.reset_progress()
     #     self.reset_ui_state()
         
-    def update_global_progress(self, value, show_status=True):
-        """
-        Update progress bar dan percentage label
-        
-        Args:
-            value (float): Progress value 0.0 - 1.0
-            show_status (bool): Show progress or hide after completion
-        """
-        # Show progress container if not visible
-        if not self.is_exporting:
-            self.show_progress()
-        
-        # Update progress bar
-        self.progress_bar.set(value)
-        
-        # Update percentage text
-        percentage = int(value * 100)
-        self.progress_label.configure(text=f"{percentage}%")
-        
-        # Color based on progress
-        if value >= 1.0:
-            self.progress_bar.configure(progress_color="#4caf50")  # Green
-            self.progress_label.configure(text_color="#4caf50")
-        elif value >= 0.5:
-            self.progress_bar.configure(progress_color="#2196f3")  # Blue
-            self.progress_label.configure(text_color="#ffffff")
-        else:
-            self.progress_bar.configure(progress_color="#ff9800")  # Orange
-            self.progress_label.configure(text_color="#ffffff")
-        
-        self.update_idletasks()
-        
-        # Auto hide after completion
-        if value >= 1.0 and not show_status:
-            self.after(1500, self.hide_progress)
+    
 
-    def reset_progress(self):
-        """Reset progress bar ke state awal"""
-        self.progress_bar.set(0)
-        self.progress_label.configure(text="0%", text_color="#999999")
-        self.progress_bar.configure(progress_color="#4caf50")
-        self.hide_progress()
+    # def reset_progress(self):
+    #     """Reset progress bar ke state awal"""
+    #     self.global_progress_bar.set(0)
+    #     self.progress_label.configure(text="0%", text_color="#999999")
+    #     self.global_progress_bar.configure(progress_color="#4caf50")
+    #     self.hide_progress()
         
     def export_rekap_bnsp(self):
         """Export Rekap BNSP format"""
@@ -691,25 +706,25 @@ class ExportDialog(ctk.CTkToplevel):
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[{tanggal_pelatihan}] Rekap Peserta LSP Energi.xlsx")
                 
                 # Update progress
-                self.after(0, lambda: self.update_global_progress(0.5))
+                self.after(0, lambda: self._on_global_progress(0.5))
                 
                 # Export data
                 exporter = export_Excel(os.path.join(BASE_DIR, TEMPLATE_REKAP_BNSP))
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
                 # Update progress
-                self.after(0, lambda: self.update_global_progress(1.0))
+                self.after(0, lambda: self._on_global_progress(1.0))
                 
                 # Show result in main thread
                 if success:
-                    self.after(300, lambda: self.show_success())
+                    self.after(0, lambda: self._on_global_completed())
                 else:
-                    self.after(0, self.reset_progress)
-                    self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
+                    # self.after(0, self.reset_progress)
+                    self.after(0, lambda: self._on_global_error(None))
                     
             except Exception as e:
-                self.after(0, self.reset_progress)
-                self.after(100, self.show_error, str(e))
+                # self.after(0, self.reset_progress)
+                self.after(100, self._on_global_error(str(e)))
             finally:
                 pythoncom.CoUninitialize()
         
@@ -744,23 +759,23 @@ class ExportDialog(ctk.CTkToplevel):
                 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"[AWL] Peserta BNSP - {tanggal_pelatihan}.xlsx")
                 
-                self.after(0, lambda: self.update_global_progress(0.5))
+                self.after(10, lambda: self._on_global_progress(0.5))
                 
                 # Export data
                 exporter = export_Excel(os.path.join(BASE_DIR, TEMPLATE_AWL_REPORT))
                 success = exporter.export(data_peserta, OUTPUT_PATH)
                 
-                self.after(0, lambda: self.update_global_progress(1.0))
+                self.after(10, lambda: self._on_global_progress(1.0))
                 
                 if success:
-                    self.after(300, lambda: self.show_success())
+                    self.after(10, lambda: self._on_global_completed())
                 else:
-                    self.after(0, self.reset_progress)
-                    self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!"))
+                    # self.after(0, self.reset_progress)
+                    self.after(10, self._on_global_error(None))
                     
             except Exception as e:
-                self.after(0, self.reset_progress)
-                self.after(100, self.show_error, str(e))
+                # self.after(0, self.reset_progress)
+                self.after(10, self._on_global_error, str(e))
             finally:
                 pythoncom.CoUninitialize()
         
@@ -810,11 +825,21 @@ class ExportDialog(ctk.CTkToplevel):
                 pesan
             )
             return
+        
+        for peserta in self.peserta_list:
+            row_frame = self.peserta_rows[peserta.id_peserta]
+            row_frame.grid_columnconfigure(3, weight=0, minsize=200)
+            peserta._progress_bar.pack(side="right", padx=(8, 5))
+            peserta._progress_bar.set(0)
+            peserta._status_label.destroy()
+            peserta._progress_bar.configure(progress_color="#484848")
+            peserta._run_btn.configure(state="disabled", fg_color="#666666")
+            
         exporter = DokBNSPBatchProcessor()
         def export_thread():
             try:
                 # Show progress
-                self.after(0, lambda: self.update_global_progress(0))
+                self.after(0, lambda: self._on_global_progress(0))
                 
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 
@@ -822,43 +847,57 @@ class ExportDialog(ctk.CTkToplevel):
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
                         
                 # Export data
-                 
+                progress_map = {p.id_peserta: 0 for p in self.peserta_list}
+                completed_count = 0
+                total_peserta = len(self.peserta_list)
                 def on_single_status(peserta_id, status, progress=None):
+                    nonlocal completed_count
                     match status:
+                        
                         case s if 'running' in s:
-                            self.after(0,lambda id=peserta_id, prog=progress:self._update_row_progress(id, prog))
+                            progress_map[peserta_id] = progress
+                        
+                            self.after(0, lambda id=peserta_id, prog=progress: self._on_row_progress(id, prog))
+                            
+                            total_progress = sum(progress_map.values())
+                            avg_progress = total_progress / (total_peserta * 100)  
+                            self.after(0, lambda avg=avg_progress: self._on_global_progress(avg))
 
                         case s if 'completed' in s:
-                            self.after(0,lambda id=peserta_id:self._on_row_completed(id))
+                            completed_count += 1
+                            progress_map[peserta_id] = 100  
+                            
+                            self.after(0, lambda id=peserta_id: self._on_row_completed(id))
+                            
+                            avg_progress = sum(progress_map.values()) / (total_peserta * 100)
+                            self.after(0, lambda avg=avg_progress: self._on_global_progress(avg))
 
                         case s if 'error' in s:
-                            self.after(0,lambda id=peserta_id:self._on_row_error(id))
+                            self.after(0,lambda id=peserta_id: self._on_row_error(id))
                                                                 
-                def on_global_status(status, progress=None):
+                def on_global_status(status):
                     match status:
-                        case s if 'running' in s:
-                            self.after(0, lambda p=progress: self.update_global_progress(p))
-
                         case s if 'completed' in s:
-                            self.after(0, lambda: self.update_global_progress(1.0))
-                            self.after(300, lambda: self.show_success())
+                            self.after(0, lambda: self._on_global_progress(1.0))
+                            self.after(300, lambda: self._on_global_completed())
 
                         case s if 'error' in s:
-                            self.after(0, self.reset_progress)
-                            self.after(100, lambda: messagebox.showerror("ERROR", "❌ Export gagal!\n"))    
+                            # self.after(0, self.reset_progress)
+                            self.after(0, lambda: self._on_global_error(None))
+                            
 
                 exporter.batch_process(
                     tanggal_pelatihan, 
                     self.peserta_list, 
                     self.selected_files, 
                     OUTPUT_PATH,
-                    callback_single=on_single_status,
-                    callback_global=on_global_status,
+                    on_single_status,
+                    on_global_status,
                 )
                 
             except Exception as e:
-                self.after(0, self.reset_progress)
-                logging.warning(f"Err -> {e}")
+                self.after(0, lambda: self._on_global_error(str(e)))
+
             
             finally:
                 exporter.cleanup()

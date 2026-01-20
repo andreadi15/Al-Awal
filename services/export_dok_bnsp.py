@@ -219,7 +219,23 @@ class DokBNSPSingleProcessor:
             if doc:
                 doc.Close(SaveChanges=False)
                 
-                
+    def cleanup(self):
+        """Force cleanup all resources"""
+        # Close current document
+        if self.current_doc:
+            try:
+                self.current_doc.Close(SaveChanges=False)
+            except:
+                pass
+            self.current_doc = None
+        
+        # Quit Word
+        if self.word:
+            try:
+                self.word.Quit()
+            except:
+                pass
+            self.word = None              
                 
 class DokBNSPBatchProcessor:
 
@@ -247,12 +263,12 @@ class DokBNSPBatchProcessor:
                     output_folder,
                     callback_single,
                 )
-                if result:
-                    if callback_global:
-                        percent = (index / total) * 100
-                        callback_global('running', percent)
-                        continue
-                else:
+                # if result:
+                #     if callback_global:
+                #         percent = (index / total)
+                #         callback_global('running', percent)
+                #         continue
+                if not result:
                     if callback_global:
                         callback_global('error', None)
                     return
@@ -260,17 +276,17 @@ class DokBNSPBatchProcessor:
             except Exception as e:
                 logging.warning(f"[Error] Batch Processor -> {e}")
                 
-                if callback_single:
-                    callback_single(peserta.id_peserta, "error", None)
+                # if callback_single:
+                #     callback_single(peserta.id_peserta, "error", None)
 
-                if callback_global:
-                    callback_global('error', None)
+                # if callback_global:
+                #     callback_global('error', None)
                 return 
             
         if callback_global:
             callback_global('completed', None)
         return 
-
+            
     def cleanup(self):
         if self.single_processor.word:
             self.single_processor.word.Quit()
