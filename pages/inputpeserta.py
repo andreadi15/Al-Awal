@@ -216,6 +216,16 @@ class InputPesertaPage(ctk.CTkFrame):
         entry = create_entry.createEntry(form_content, "textbox", placeholder="Alamat lengkap")
         self.entries["alamat"] = entry.widget
         form_row.FormRow(form_content, current_row, "Alamat", self.entries["alamat"])
+        def on_tab_alamat(event):
+            self.entries["kelurahan"].focus_set()
+            return "break"
+        
+        def on_shift_tab_alamat(event):
+            self.entries["tanggal_lahir"].focus_set()
+            return "break"
+        
+        self.entries["alamat"].bind("<Tab>", on_tab_alamat)
+        self.entries["alamat"].bind("<Shift-Tab>", on_shift_tab_alamat)
         current_row += 2
         
         # 7. Kelurahan
@@ -523,6 +533,9 @@ class InputPesertaPage(ctk.CTkFrame):
         print(f"[DEBUG] Selected ID: {self.selected_id_sertifikasi}")
         
     def format_tanggal_input(self, event):  
+        if event.keysym == "Tab":
+            return
+    
         entry = event.widget
         current_text = entry.get()
         
@@ -583,12 +596,16 @@ class InputPesertaPage(ctk.CTkFrame):
         return "break"
     
     def format_no_telepon(self, event):
+        if event.keysym == "Tab":
+            return
+    
         if event.keysym == "BackSpace":
             return  
-        elif event.char.isdigit():
+        
+        if event.char.isdigit():
             return 
-        else:
-            return "break"
+        
+        return "break"
         
     def _on_mousewheel(self, event):
         try:
@@ -686,6 +703,14 @@ class InputPesertaPage(ctk.CTkFrame):
         self.entries["alamat"].delete("1.0", "end")
         self.entries["alamat"].insert("1.0", peserta.alamat)
         
+        if hasattr(self.entries["alamat"], '_placeholder_active'):
+            if peserta.alamat.strip():  
+                self.entries["alamat"]._placeholder_active = False
+                self.entries["alamat"].configure(text_color="#cccccc")
+            else:  
+                self.entries["alamat"]._placeholder_active = True
+                self.entries["alamat"].configure(text_color="#8B8B8B")
+        
         self.entries["kelurahan"].delete(0, "end")
         self.entries["kelurahan"].insert(0, peserta.kelurahan)
         
@@ -773,6 +798,18 @@ class InputPesertaPage(ctk.CTkFrame):
          for key, widget in self.entries.items():
             if isinstance(widget, ctk.CTkEntry):
                 widget._activate_placeholder()
+                continue
+            if isinstance(widget, ctk.CTkTextbox):
+                if hasattr(widget, '_placeholder_text'):
+                    current_content = widget.get("1.0", "end-1c").strip()
+                    if not current_content:
+                        widget.delete("1.0", "end")
+                        widget.insert("1.0", widget._placeholder_text)
+                        widget.configure(text_color="#8B8B8B")
+                        widget._placeholder_active = True
+                    else:
+                        widget.configure(text_color="#cccccc")
+                        widget._placeholder_active = False
                 continue
                         
     def clear_form(self):

@@ -15,6 +15,9 @@ class NikEntry(ctk.CTkEntry):
         return " ".join(full[i:i+4] for i in range(0, 16, 4))
 
     def _on_key(self, event):
+        if event.keysym == "Tab":
+            return
+    
         if event.keysym == "BackSpace":
             self._value = self._value[:-1]
         elif event.char.isdigit() and len(self._value) < 16:

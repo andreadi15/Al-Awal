@@ -42,8 +42,37 @@ class createEntry:
                 height=80,
                 corner_radius=8,
                 fg_color="#2a2a2a",
-                border_color=self.DEFAULT_BORDER_COLOR
+                border_color=self.DEFAULT_BORDER_COLOR,
+                border_width=2 
             )
+            
+            placeholder = kwargs.get("placeholder", "")
+            if placeholder:
+                self.widget._placeholder_text = placeholder
+                self.widget._placeholder_active = True
+                
+                self.widget.insert("1.0", placeholder)
+                self.widget.configure(text_color="#8B8B8B")
+                
+                def on_focus_in_textbox(event):
+                    if self.widget._placeholder_active and self.widget.get("1.0", "end-1c") == placeholder:
+                        self.widget.delete("1.0", "end")
+                        self.widget.configure(text_color="#cccccc")
+                        self.widget._placeholder_active = False
+                
+                def on_focus_out_textbox(event):
+                    content = self.widget.get("1.0", "end-1c").strip()
+                    if not content:
+                        self.widget.delete("1.0", "end")
+                        self.widget.insert("1.0", placeholder)
+                        self.widget.configure(text_color="#8B8B8B")
+                        self.widget._placeholder_active = True
+                    else:
+                        self.widget.configure(text_color="#cccccc")
+                        self.widget._placeholder_active = False
+                
+                self.widget.bind("<FocusIn>", on_focus_in_textbox)
+                self.widget.bind("<FocusOut>", on_focus_out_textbox)
         elif input_type == "nik":
             self.widget = NikEntry(
                 parent,
