@@ -2,7 +2,7 @@
 # FILE: services/pdf_service.py
 # =======================
 
-import os, sys, time
+import os, sys, time, logging
 import threading
 from typing import Callable, Optional
 
@@ -97,9 +97,12 @@ class PdfProcessor:
             
             doc.close()
             progress_callback(pdf_model, 'completed')
+            return True
             
         except Exception as e:
-            progress_callback(pdf_model, 'error', str(e))
+            progress_callback(pdf_model, 'error')
+            logging.error(f"[ERROR] [Single PDF Process] -> {str(e)}")
+            return False
         
         # self.is_running = True
         # self.is_paused = False
@@ -126,75 +129,72 @@ class PdfBatchProcessor:
     """Service untuk process multiple PDFs"""
     
     def __init__(self):
-        self.is_running = False
-        self.is_paused = False
-        self.current_index = 0
-        self.processors = {} 
+        # self.is_running = False
+        # self.is_paused = False
+        # self.current_index = 0
+        # self.processors = {} 
+        self.processor = PdfProcessor()
         
     def process_all(
         self,
         pdf_models: list[PdfFileModel],
         make_folder: bool,
-        file_progress_callback: Callable[[int, int, int], None],  # (file_index, current_page, total_pages)
-        global_progress_callback: Callable[[int, int], None],  # (completed_files, total_files)
-        completion_callback: Callable[[int, int], None]  # (success_count, total_count)
+        single_callback,  
+        global_callback
     ):
-        """
-        Process all PDFs sequentially
         
-        Args:
-            pdf_models: List of PdfFileModel
-            make_folder: Folder creation setting
-            file_progress_callback: Per-file progress update
-            global_progress_callback: Global progress update
-            completion_callback: All files done
-        """
-        
-        def _process_next(index: int):
-            if index >= len(pdf_models) or self.is_paused:
-                success_count = sum(1 for p in pdf_models if p.status == "completed")
-                completion_callback(success_count, len(pdf_models))
-                self.is_running = False
+        # def _process_next(index: int):
+        #     if index >= len(pdf_models) or self.is_paused:
+        #         success_count = sum(1 for p in pdf_models if p.status == "completed")
+        #         completion_callback(success_count, len(pdf_models))
+        #         self.is_running = False
+        #         return
+            
+        #     pdf_model = pdf_models[index]
+            
+        #     self.processors[index] = processor
+            
+        #     def on_complete(success, message):
+        #         if success:
+        #             pdf_model.set_completed()
+        #         else:
+        #             if "Paused" in message:
+        #                 pdf_model.status = "paused"
+        #             else:
+        #                 pdf_model.set_error(message)
+                
+        #         completed = sum(1 for p in pdf_models[:index+1] if p.status in ["completed", "paused", "error"])
+        #         global_progress_callback(completed, len(pdf_models))
+                
+        #         _process_next(index + 1)
+            
+        #     pdf_model.status = "processing"
+
+        # for idx, pdf_model in enumerate(pdf_models,start=1):
+        for pdf_model in pdf_models:
+            result = self.processor.process_pdf(pdf_model, make_folder, single_callback)
+            
+            if not result:
+                if global_callback:
+                    global_callback('error')
                 return
-            
-            pdf_model = pdf_models[index]
-            processor = PdfProcessor()
-            self.processors[index] = processor
-            
-            def on_progress(current_page, total_pages):
-                file_progress_callback(index, current_page, total_pages)
-            
-            def on_complete(success, message):
-                if success:
-                    pdf_model.set_completed()
-                else:
-                    if "Paused" in message:
-                        pdf_model.status = "paused"
-                    else:
-                        pdf_model.set_error(message)
                 
-                completed = sum(1 for p in pdf_models[:index+1] if p.status in ["completed", "paused", "error"])
-                global_progress_callback(completed, len(pdf_models))
-                
-                _process_next(index + 1)
-            
-            pdf_model.status = "processing"
-            processor.process_pdf(pdf_model, make_folder, on_progress, on_complete)
+        global_callback('completed')
         
-        self.is_running = True
-        self.is_paused = False
-        self.current_index = 0
-        _process_next(0)
+        # self.is_running = True
+        # self.is_paused = False
+        # self.current_index = 0
+        # _process_next(0)
     
-    def pause_all(self):
-        """Pause all processing"""
-        self.is_paused = True
-        for processor in self.processors.values():
-            processor.pause()
+    # def pause_all(self):
+    #     """Pause all processing"""
+    #     self.is_paused = True
+    #     for processor in self.processors.values():
+    #         processor.pause()
     
-    def stop_all(self):
-        """Stop all processing"""
-        self.is_paused = True
-        self.is_running = False
-        for processor in self.processors.values():
-            processor.stop()
+    # def stop_all(self):
+    #     """Stop all processing"""
+    #     self.is_paused = True
+    #     self.is_running = False
+    #     for processor in self.processors.values():
+    #         processor.stop()

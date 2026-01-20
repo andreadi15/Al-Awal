@@ -583,7 +583,7 @@ class ExportDialog(ctk.CTkToplevel):
     def _on_global_error(self, msg=None):
         self.global_progress_bar.configure(progress_color="#db1717")
         if msg:
-            logging.error(f"[Error] Export gagal! ->\n{msg}")
+            logging.error(f"[Error] Export gagal! -> {msg}")
             return
         logging.error(f"[Error] !!Export gagal!!")
     

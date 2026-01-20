@@ -498,12 +498,9 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 
                 # Start processing
                 # pdf_model.status = "processing"
-                print(f"[DEBUG] Calling processor.process_pdf()...")  # ← TAMBAH
                 processor.process_pdf(pdf_model, self.make_folder, on_single_status)
-                print(f"[DEBUG] processor.process_pdf() called")  # ← TAMBAH
             except Exception as e:
-                print(e)
-                logging.exception(f"Fatal Err ->\n{e}")
+                logging.exception(f"[ERROR] [Single PDF Handler] ->\n{e}")
                 self.after(0, lambda id=pdf_model.file_id: self._on_row_error(id))
             
         Thread(target=process_thread, daemon=True).start()
@@ -622,7 +619,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
         batch_processor = PdfBatchProcessor()
         def process_thread():
             try:
-                progress_map = {f.file_index: 0 for f in self.pdf_files}
+                progress_map = {f.file_id: 0 for f in self.pdf_files}
                 completed_count = 0
                 total_files = len(self.pdf_files)
                 def on_single_status(file_id, status, progress=None):
@@ -672,7 +669,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 #     if pdf_model.status == "idle":
                 #         self._prepare_row_for_processing(index)
             except Exception as e:
-                self.after(0, lambda err=str(e): self._on_global_error(err))
+                logging.exception(f"[ERROR] [Batch PDF Handler] ->\n{e}")
+                self.after(0, lambda: self._on_global_error())
                 
         thread = Thread(target=process_thread, daemon=True)
         thread.start()
@@ -790,12 +788,8 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # messagebox.showinfo("Completed", message)
     
     def _on_global_error(self, msg=None):
-        print(msg)
         self.global_progress_bar.configure(progress_color="#db1717")
-        if msg:
-            logging.error(f"[Error] Export gagal! ->\n{msg}")
-            return
-        logging.error(f"[Error] !!Export gagal!!")
+        
     # ==========================================
     # UTILITY METHODS
     # ==========================================

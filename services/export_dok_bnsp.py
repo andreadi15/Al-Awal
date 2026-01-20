@@ -251,7 +251,7 @@ class DokBNSPBatchProcessor:
         callback_single,
         callback_global
     ):
-        total = len(peserta_list)
+        # total = len(peserta_list)
         for index, peserta in enumerate(peserta_list, start=1):
             peserta: PesertaModel
             try:
