@@ -2,11 +2,11 @@
 # FILE: models/pdf_model.py
 # =======================
 
-import uuid
 class PdfFileModel:
     """Model untuk menyimpan state dari setiap PDF file"""
     
     def __init__(self, file_path: str):
+        import uuid
         import os
         self.file_id = f"File-{uuid.uuid4().hex[:8].upper()}"
         self.file_path = file_path
@@ -66,3 +66,9 @@ class PdfFileModel:
         pdf.progress = data['progress']
         pdf.error_message = data['error_message']
         return pdf
+    
+    # def __str__(self):
+    #     return f"PesertaModel(nama={self.nama}, nik={self.nik})"
+    
+    # def __repr__(self):
+    #     return self.__str__()

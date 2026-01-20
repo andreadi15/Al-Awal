@@ -2,7 +2,7 @@
 # FILE: services/pdf_service.py
 # =======================
 
-import os, sys
+import os, sys, time
 import threading
 from typing import Callable, Optional
 
@@ -51,8 +51,7 @@ class PdfProcessor:
         self, 
         pdf_model: PdfFileModel, 
         make_folder: bool,
-        progress_callback: Callable[[int, int], None],
-        completion_callback: Callable[[bool, str], None]
+        progress_callback=None,
     ):
         """
         Process single PDF file (run in thread)
@@ -64,65 +63,63 @@ class PdfProcessor:
             completion_callback: Called when done (success: bool, message: str)
         """
         
-        def _process():
-            try:
-                pdf_path = pdf_model.file_path
-                base_name = os.path.basename(pdf_path).replace(".pdf", "")
-                pdf_dir = os.path.dirname(pdf_path)
+        try:
+            pdf_path = pdf_model.file_path
+            base_name = os.path.basename(pdf_path).replace(".pdf", "")
+            pdf_dir = os.path.dirname(pdf_path)
+            
+            if make_folder:
+                output_dir = os.path.join(pdf_dir, base_name)
+                os.makedirs(output_dir, exist_ok=True)
+            else:
+                output_dir = pdf_dir
+            
+            doc = fitz.open(pdf_path)
+            total_pages = len(doc)
+            pdf_model.total_pages = total_pages
+            
+            for page_num in range(total_pages):
+                # if self.is_paused:
+                #     doc.close()
+                #     progress_callback(pdf_model.file_id, 'error', "Paused by user")
+                #     return
                 
-                if make_folder:
-                    output_dir = os.path.join(pdf_dir, base_name)
-                    os.makedirs(output_dir, exist_ok=True)
-                else:
-                    output_dir = pdf_dir
+                page = doc.load_page(page_num)
+                pix = page.get_pixmap(dpi=200)
                 
-                doc = fitz.open(pdf_path)
-                total_pages = len(doc)
-                pdf_model.total_pages = total_pages
-                
-                for page_num in range(total_pages):
-                    if self.is_paused:
-                        doc.close()
-                        completion_callback(False, "Paused by user")
-                        return
-                    
-                    page = doc.load_page(page_num)
-                    pix = page.get_pixmap(dpi=200)
-                    
-                    output_filename = f"{base_name} - page {page_num + 1}.jpg"
-                    output_path = os.path.join(output_dir, output_filename)
-                    pix.save(output_path)
-                    
-                    progress_callback(page_num + 1, total_pages)
-                
-                doc.close()
-                completion_callback(True, f"Successfully converted {total_pages} pages")
-                
-            except Exception as e:
-                error_msg = f"Error: {str(e)}"
-                completion_callback(False, error_msg)
+                output_filename = f"{base_name} - page {page_num + 1}.jpg"
+                output_path = os.path.join(output_dir, output_filename)
+                pix.save(output_path)
+                percent = ((page_num + 1) / total_pages) * 100
+                if progress_callback:
+                    progress_callback(pdf_model, 'running', percent)
+                time.sleep(0.01)
+            
+            doc.close()
+            progress_callback(pdf_model, 'completed')
+            
+        except Exception as e:
+            progress_callback(pdf_model, 'error', str(e))
         
-        self.is_running = True
-        self.is_paused = False
-        self.current_thread = threading.Thread(target=_process, daemon=True)
-        self.current_thread.start()
+        # self.is_running = True
+        # self.is_paused = False
     
-    def pause(self):
-        """Pause current processing"""
-        self.is_paused = True
-        self.is_running = False
+    # def pause(self):
+    #     """Pause current processing"""
+    #     self.is_paused = True
+    #     self.is_running = False
     
-    def resume(self):
-        """Resume processing (not implemented - would need state saving)"""
-        self.is_paused = False
+    # def resume(self):
+    #     """Resume processing (not implemented - would need state saving)"""
+    #     self.is_paused = False
     
-    def stop(self):
-        """Stop current processing"""
-        self.is_paused = True
-        self.is_running = False
-        if self.current_thread and self.current_thread.is_alive():
-            # Thread will stop on next page check
-            pass
+    # def stop(self):
+    #     """Stop current processing"""
+    #     self.is_paused = True
+    #     self.is_running = False
+    #     if self.current_thread and self.current_thread.is_alive():
+    #         # Thread will stop on next page check
+    #         pass
 
 
 class PdfBatchProcessor:

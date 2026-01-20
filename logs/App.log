@@ -40,3 +40,50 @@ TypeError: DokBNSPSingleProcessor.process() got an unexpected keyword argument '
 2026-01-20 00:15:16 | INFO | [Logger] Logging Initiate
 2026-01-20 00:16:35 | INFO | [Logger] Logging Initiate
 2026-01-20 00:17:29 | INFO | [Logger] Logging Initiate
+2026-01-20 11:32:35 | INFO | [Logger] Logging Initiate
+2026-01-20 11:35:17 | INFO | [Logger] Logging Initiate
+2026-01-20 11:41:01 | INFO | [Logger] Logging Initiate
+2026-01-20 12:12:17 | INFO | [Logger] Logging Initiate
+2026-01-20 12:13:42 | INFO | [Logger] Logging Initiate
+2026-01-20 12:16:34 | INFO | [Logger] Logging Initiate
+2026-01-20 12:19:28 | INFO | [Logger] Logging Initiate
+2026-01-20 12:20:04 | INFO | [Logger] Logging Initiate
+2026-01-20 12:31:18 | INFO | [Logger] Logging Initiate
+2026-01-20 12:32:10 | INFO | [Logger] Logging Initiate
+2026-01-20 12:33:28 | INFO | [Logger] Logging Initiate
+2026-01-20 12:35:19 | INFO | [Logger] Logging Initiate
+2026-01-20 12:37:59 | INFO | [Logger] Logging Initiate
+2026-01-20 12:39:06 | INFO | [Logger] Logging Initiate
+2026-01-20 12:41:21 | INFO | [Logger] Logging Initiate
+2026-01-20 13:34:23 | INFO | [Logger] Logging Initiate
+2026-01-20 13:35:45 | INFO | [Logger] Logging Initiate
+2026-01-20 13:36:42 | INFO | [Logger] Logging Initiate
+2026-01-20 13:41:21 | INFO | [Logger] Logging Initiate
+2026-01-20 13:44:12 | INFO | [Logger] Logging Initiate
+2026-01-20 13:45:41 | INFO | [Logger] Logging Initiate
+2026-01-20 13:47:56 | INFO | [Logger] Logging Initiate
+2026-01-20 13:54:10 | INFO | [Logger] Logging Initiate
+2026-01-20 13:55:46 | INFO | [Logger] Logging Initiate
+2026-01-20 13:57:55 | INFO | [Logger] Logging Initiate
+2026-01-20 13:58:14 | INFO | [Logger] Logging Initiate
+2026-01-20 14:00:08 | INFO | [Logger] Logging Initiate
+2026-01-20 14:00:42 | ERROR | [Error] Export gagal! ->
+'PdfFileModel' object has no attribute 'file_index'
+2026-01-20 14:03:02 | INFO | [Logger] Logging Initiate
+2026-01-20 14:05:14 | INFO | [Logger] Logging Initiate
+2026-01-20 14:05:21 | ERROR | [Error] Export gagal! ->
+'PdfFileModel' object has no attribute 'file_index'
+2026-01-20 14:05:33 | ERROR | [Error] Export gagal! ->
+'PdfFileModel' object has no attribute 'file_index'
+2026-01-20 14:06:08 | INFO | [Logger] Logging Initiate
+2026-01-20 14:06:17 | ERROR | [Error] Export gagal! ->
+'PdfFileModel' object has no attribute 'file_index'
+2026-01-20 14:06:22 | ERROR | [Error] Export gagal! ->
+'PdfFileModel' object has no attribute 'file_index'
+2026-01-20 14:07:00 | INFO | [Logger] Logging Initiate
+2026-01-20 14:07:08 | ERROR | [Error] Export gagal! ->
+'PdfFileModel' object has no attribute 'file_index'
+2026-01-20 14:13:20 | INFO | [Logger] Logging Initiate
+2026-01-20 14:13:45 | ERROR | [Error] Export gagal! ->
+'PdfFileModel' object has no attribute 'file_index'
+2026-01-20 14:14:02 | INFO | [Logger] Logging Initiate

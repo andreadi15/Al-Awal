@@ -256,8 +256,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 self.after(0, lambda: self.update_footer_visibility())
         
         # Run in thread
-        import threading
-        threading.Thread(target=_load_files, daemon=True).start()
+        Thread(target=_load_files, daemon=True).start()
     
     def toggle_folder_setting(self):
         """Toggle folder creation setting"""
@@ -362,9 +361,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
             row_frame.grid_columnconfigure(2, weight=1, minsize=200)  # Filename
             row_frame.grid_columnconfigure(3, weight=2, minsize=300)  # Progress
             row_frame.grid_columnconfigure(4, weight=0, minsize=120)  # Button
-            
-            index = next((i for i, f in enumerate(self.pdf_files) if f.file_id == pdf_model.file_id),None)
-            
+                        
             # Column 0: Number
             no_label = ctk.CTkLabel(
                 row_frame,
@@ -444,7 +441,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 height=40,
                 width=100,
                 corner_radius=8,
-                command=lambda: self.run_single_file(index)
+                command=lambda idx=index, p=pdf_model: self.start_single_processing(idx,p)
             )
             run_btn.grid(row=0, column=4, padx=10)
             
@@ -461,67 +458,55 @@ class Pdf2ImagePage(ctk.CTkFrame):
     # ==========================================
     # INDIVIDUAL FILE PROCESSING
     # ==========================================
-    def run_single_file(self, file_id: str):
-        """Run or pause single file processing"""
-        # pdf_model = self.pdf_files[file_id]
-        # row_widget = self.file_rows[file_id]
-        # Check if currently processing
-        # if pdf_model.status == "processing":
-        #     # Pause this file
-        #     self.pause_single_file(index)
-        # elif pdf_model.status == "paused":
-        #     # Skip paused files (cannot resume in this implementation)
-        #     messagebox.showinfo("Info", "Paused files cannot be resumed. Please clear and re-add the file.")
-        # elif pdf_model.status == "completed":
-        #     # Reset and re-run
-        #     if messagebox.askyesno("Confirm", "This file is already completed. Re-run?"):
-        #         pdf_model.reset()
-        #         self.start_single_processing(index)
-        # else:
-            # Start processing
-        self.start_single_processing(file_id)
     
-    def start_single_processing(self, file_id: str):
+    def start_single_processing(self, index: int, pdf_model: PdfFileModel):
         """Start processing single file"""
-        pdf_model: PdfFileModel = self.pdf_files[file_id]
-        row_widget = self.file_rows[file_id]
-        
+        # row_widget = self.file_rows[pdf_model.file_id]
         index = next((i for i, f in enumerate(self.pdf_files) if f.file_id == pdf_model.file_id),None)
         
-        print(f"[DEBUG] Starting processing for index {index}")
+        print(f"[DEBUG] Starting processing for index {index + 1}")
         print(f"[DEBUG] File path: {pdf_model.file_path}")
         print(f"[DEBUG] Total pages: {pdf_model.total_pages}")
         
         # Update UI - show progress bar
-        row_widget._status_label.pack_forget()
-        row_widget._progress_label.pack(side="left", padx=(0, 10))
-        row_widget._progress_bar.pack(side="left", fill="x", expand=True)
-        row_widget._action_btn.configure(text="⏸️ Pause", fg_color="#ff9800")
-        
+        pdf_model._status_label.pack_forget()
+        pdf_model._progress_label.pack(side="left", padx=(0, 10))
+        pdf_model._progress_bar.pack(side="left", fill="x", expand=True)
+        pdf_model._progress_bar.set(0)
+        pdf_model._run_btn.configure(text="⏸️ Pause", fg_color="#ff9800")
+        print("asasasasas")
         # Create processor
         processor = PdfProcessor()
         # self.individual_processors[index] = processor
-        
+        print("accccc")
         # Define callbacks
-        def on_single_status(file_id, status, progress=None):
-            match status:
-                case s if 'running' in s:
-                    # self.after(0, pdf_model.update_progress(progress))                    
-                    self.after(0, lambda id=file_id, prog=progress: self._update_row_progress(id, prog))
-                    
-                case s if 'completed' in s:
-                    # pdf_model.set_completed()
-                    self.after(0, lambda id=file_id: self._on_row_completed(id))
+        def process_thread():
+            try:
+                def on_single_status(pdf_model, status, progress=None):
+                    match status:
+                        case s if 'running' in s:
+                            # self.after(0, pdf_model.update_progress(progress))                    
+                            self.after(0, lambda mod=pdf_model, prog=progress: self._update_row_progress(mod, prog))
+                            
+                        case s if 'completed' in s:
+                            # pdf_model.set_completed()
+                            self.after(0, lambda mod=pdf_model: self._on_row_completed(mod))
 
-                case s if 'error' in s:
-                    # pdf_model.set_error(message)
-                    self.after(0, lambda id=file_id: self._on_row_error(id))                 
-        
-        # Start processing
-        # pdf_model.status = "processing"
-        print(f"[DEBUG] Calling processor.process_pdf()...")  # ← TAMBAH
-        processor.process_pdf(pdf_model, self.make_folder, on_single_status)
-        print(f"[DEBUG] processor.process_pdf() called")  # ← TAMBAH
+                        case s if 'error' in s:
+                            # pdf_model.set_error(message)
+                            self.after(0, lambda mod=pdf_model: self._on_row_error(mod))                 
+                
+                # Start processing
+                # pdf_model.status = "processing"
+                print(f"[DEBUG] Calling processor.process_pdf()...")  # ← TAMBAH
+                processor.process_pdf(pdf_model, self.make_folder, on_single_status)
+                print(f"[DEBUG] processor.process_pdf() called")  # ← TAMBAH
+            except Exception as e:
+                print(e)
+                logging.exception(f"Fatal Err ->\n{e}")
+                self.after(0, lambda id=pdf_model.file_id: self._on_row_error(id))
+            
+        Thread(target=process_thread, daemon=True).start()
     
     # def pause_single_file(self, index: int):
     #     """Pause single file processing"""
@@ -532,26 +517,26 @@ class Pdf2ImagePage(ctk.CTkFrame):
     #         processor.pause()
     #         pdf_model.status = "paused"
     
-    def _update_row_progress(self, file_id: str, progress):
+    def _update_row_progress(self, model, progress):
         """Update row progress bar and label"""
         # if index >= len(self.file_rows):
         #     return
+        # pdf_model = next(p for p in self.pdf_files if p.file_id == file_id)
         
-        row_widget = self.file_rows[file_id]
-        row_widget._progress_bar.set(progress / 100)
-        row_widget._progress_label.configure(text=f"{int(progress)}%")
+        model._progress_bar.set(progress/100)
+        model._progress_label.configure(text=f"{int(progress)}%")
     
-    def _on_row_completed(self, file_id: str):
+    def _on_row_completed(self, model):
         """Handle file completion"""
         # if file_id >= len(self.file_rows):
         #     return
         
-        row_widget = self.file_rows[file_id]
+        # pdf_model = next(p for p in self.pdf_files if p.file_id == file_id)
         # pdf_model = self.pdf_files[file_id]
         
         # Update UI
-        row_widget._progress_bar.configure(progress_color="#34a853")
-        row_widget._progress_bar.set(1.0)
+        model._progress_bar.configure(progress_color="#34a853")
+        model._progress_bar.set(1.0)
         # row_widget._progress_label.configure(text="✓ 100%", text_color="#34a853")
         # row_widget._action_btn.configure(
         #     text="✓ Done",
@@ -574,15 +559,15 @@ class Pdf2ImagePage(ctk.CTkFrame):
     #         state="disabled"
     #     )
     
-    def _on_row_error(self, file_id: str):
+    def _on_row_error(self, model):
         """Handle file error"""
         # if index >= len(self.file_rows):
         #     return
         
-        row_widget = self.file_rows[file_id]
+        # pdf_model = next(p for p in self.pdf_files if p.file_id == file_id)
         
         # Update UI
-        row_widget._progress_bar.configure(progress_color="#d32f2f")
+        model._progress_bar.configure(progress_color="#d32f2f")
         # row_widget._status_label.configure(text=f"❌ Error: {error_msg[:30]}")
         # row_widget._action_btn.configure(
         #     text="❌ Error",
@@ -687,7 +672,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 #     if pdf_model.status == "idle":
                 #         self._prepare_row_for_processing(index)
             except Exception as e:
-                self.after(0, lambda: self._on_global_error(str(e)))
+                self.after(0, lambda err=str(e): self._on_global_error(err))
                 
         thread = Thread(target=process_thread, daemon=True)
         thread.start()
@@ -805,6 +790,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
         # messagebox.showinfo("Completed", message)
     
     def _on_global_error(self, msg=None):
+        print(msg)
         self.global_progress_bar.configure(progress_color="#db1717")
         if msg:
             logging.error(f"[Error] Export gagal! ->\n{msg}")

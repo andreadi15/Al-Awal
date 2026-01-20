@@ -1,46 +1,31 @@
-import logging, os
+# file: logger_setup.py
+import logging
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from config import BASE_DIR
 
-class AppLogger:
-    _initialized = False
+# LOG_DIR = os.path.join(BASE_DIR, "logs")
+# os.makedirs(BASE_DIR, exist_ok=True)
+LOG_FILE = os.path.join(BASE_DIR, "app.log")
 
-    @classmethod
-    def setup(cls):
-        if cls._initialized:
-            return
+class WIBFormatter(logging.Formatter):
+    """Format waktu WIB untuk log"""
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, ZoneInfo("Asia/Jakarta"))
+        return dt.strftime(datefmt or "%Y-%m-%d %H:%M:%S")
 
-        class WIBFormatter(logging.Formatter):
-            def formatTime(self, record, datefmt=None):
-                dt = datetime.fromtimestamp(
-                    record.created,
-                    ZoneInfo("Asia/Jakarta")
-                )
-                return dt.strftime(datefmt or "%Y-%m-%d %H:%M:%S")
+# Setup ROOT LOGGER
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8"),
+    ]
+)
 
-        LOG_DIR = os.path.join(BASE_DIR, "logs")
-        os.makedirs(LOG_DIR, exist_ok=True)
-
-        log_file = os.path.join(
-            LOG_DIR,
-            f"App.log"
-        )
-        
-        handler = logging.FileHandler(
-            log_file,
-            mode="a",          
-            encoding="utf-8"
-        )
-
-        formatter = WIBFormatter(
-            "%(asctime)s | %(levelname)s | %(message)s"
-        )
-
-        handler.setFormatter(formatter)
-
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
-        root_logger.addHandler(handler)
-
-        cls._initialized = True
+# Ganti formatter untuk file handler agar pakai WIBFormatter
+for h in logging.getLogger().handlers:
+    if isinstance(h, logging.FileHandler):
+        h.setFormatter(WIBFormatter("%(asctime)s | %(levelname)s | %(message)s"))

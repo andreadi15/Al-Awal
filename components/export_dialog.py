@@ -442,13 +442,14 @@ class ExportDialog(ctk.CTkToplevel):
         peserta._progress_bar.pack(side="right", padx=(8, 5))
         peserta._run_btn.configure(state="disabled", fg_color="#666666")
         
+        exporter = DokBNSPSingleProcessor()
         def export_thread():
             try:
                 tanggal_pelatihan = return_format_tanggal(self.sertifikasi_info["tanggal_pelatihan"])
                 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
                 OUTPUT_PATH = os.path.join(DOWNLOAD_DIR, f"Dokumen BNSP {tanggal_pelatihan}")
                 
-                exporter = DokBNSPSingleProcessor()
+                
                 
                 def on_file_status(peserta_id, status, progress=None):
                     match status:

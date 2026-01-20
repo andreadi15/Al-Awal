@@ -90,7 +90,7 @@ class DokBNSPSingleProcessor:
         return True
 
     # === Word generation (dipindah utuh dari class lama) ===
-    def _generate_document(self,id_peserta, row_data, template_path, output_folder, callback_progress):
+    def _generate_document(self, id_peserta, row_data, template_path, output_folder, callback_progress):
         import pandas as pd
         import win32com.client as win32
 
