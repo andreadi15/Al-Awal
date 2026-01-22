@@ -625,6 +625,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 text=f"Completed {completed}/{total} files (100%)"
             )
     
+    # Handler Global Completed 
     def _on_global_completed(self):
         self.is_batch_running = False 
         self.global_progress_bar.set(1.0)
@@ -644,7 +645,6 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         self.is_batch_running = False
     
-    # Handler Global Error
     def _on_global_error(self):
         self.is_batch_running = False 
     
