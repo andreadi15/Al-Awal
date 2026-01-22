@@ -644,6 +644,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
         
         self.is_batch_running = False
     
+    # Handler Global Error
     def _on_global_error(self):
         self.is_batch_running = False 
     
