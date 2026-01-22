@@ -605,6 +605,7 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 if pdf_model._progress_bar.get() < 1.0:
                     self._on_row_cancelled(pdf_model)
    
+    # Handler Global Progress 
     def _on_global_progress(self, completed: int, total: int, progress: float):
         if progress * 100 >= 100:
             self.global_progress_bar.configure(progress_color="#4caf50")  # Green
@@ -625,7 +626,6 @@ class Pdf2ImagePage(ctk.CTkFrame):
                 text=f"Completed {completed}/{total} files (100%)"
             )
     
-    # Handler Global Completed 
     def _on_global_completed(self):
         self.is_batch_running = False 
         self.global_progress_bar.set(1.0)
