@@ -28,7 +28,6 @@ setup_dependencies()
 import fitz
 from models.pdf_model import PdfFileModel
 
-# ptocess PDF Single
 class PdfProcessor:    
     def __init__(self):
         self.is_cancelled = False
@@ -99,6 +98,7 @@ class PdfProcessor:
             logging.error(f"[ERROR] [Single PDF Process] -> {str(e)}")
             return False
         
+# ptocess PDF Batch
 class PdfBatchProcessor:
     def __init__(self):
         self.processor = PdfProcessor()
