@@ -29,6 +29,7 @@ class DokBNSPSingleProcessor:
             'Dp_b': f"{tanggal} {bulan} {tahun}",
             'ttd_participant': ttd_path
         }
+    # ptocess single
     def process(
         self, 
         index, 
