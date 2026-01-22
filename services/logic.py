@@ -21,9 +21,6 @@ def load_config(path):
             key = key.strip()
             value = value.strip()
 
-            # =========================
-            # GENERAL
-            # =========================
             if key.startswith("general."):
                 sub_key = key[len("general."):]
 
@@ -34,9 +31,6 @@ def load_config(path):
                 else:
                     config["general"][sub_key] = value
 
-            # =========================
-            # TEMPLATE
-            # =========================
             elif key.startswith("template."):
                 skema = key[len("template."):]
 
@@ -127,7 +121,6 @@ def format_kabupaten(kabupaten: str):
     return f"{prefix.upper()} {kabupaten}"
    
 def format_tanggal_to_general(tanggal):
-    
     new_tanggal = return_format_tanggal(tanggal)
     dt = datetime.strptime(new_tanggal, "%d-%m-%Y")
     bulan_id = [

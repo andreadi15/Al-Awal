@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3, logging
 from config import DB_PATH, DEBUG
 from datetime import datetime
 from models.peserta_model import PesertaModel
@@ -60,7 +60,7 @@ def init_db():
     conn.close()
     
     if DEBUG:
-        print("[DB] Database initialized")
+        logging.info("[DB] Database initialized")
 
 # ========== [START] Peserta ============= 
 
@@ -111,9 +111,10 @@ def DB_Save_Peserta(peserta: PesertaModel, id_sertifikasi: str):
 
         conn.commit()
         if DEBUG:
-            print(f"[DB] Peserta saved: {peserta.nama} -> Sertifikasi: {id_sertifikasi}")
+            logging.info(f"[DB] Peserta saved: {peserta.nama} -> Sertifikasi: {id_sertifikasi}")
     except Exception as e:
-        print("[DB ERROR SAVE]", e)
+        if DEBUG:
+            logging.error(f"[DB ERROR SAVE] -> {e}")
         raise
 
     finally:
@@ -159,14 +160,14 @@ def DB_Save_Peserta_Batch(peserta_list: list[PesertaModel], id_sertifikasi: str)
         conn.commit()
         
         if DEBUG:
-            print(f"[DB] Batch saved {len(peserta_list)} peserta -> Sertifikasi: {id_sertifikasi}")
+            logging.info(f"[DB] Batch saved {len(peserta_list)} peserta -> Sertifikasi: {id_sertifikasi}")
         
         return len(peserta_list)
         
     except Exception as e:
         conn.rollback()
-        print("[DB ERROR BATCH SAVE]", e)
-        raise
+        if DEBUG:
+            logging.error(f"[DB ERROR BATCH SAVE] -> {e}")
     finally:
         conn.close()
         
@@ -221,7 +222,7 @@ def DB_Get_Peserta_By_Sertifikasi(id_sertifikasi: str):
         peserta_list.append(peserta)
     
     if DEBUG:
-        print(f"[DB] Loaded {len(peserta_list)} peserta for sertifikasi: {id_sertifikasi}")
+        logging.info(f"[DB] Loaded {len(peserta_list)} peserta for sertifikasi: {id_sertifikasi}")
 
     return peserta_list        
 
@@ -238,19 +239,13 @@ def DB_Get_Peserta_Count_By_Sertifikasi(id_sertifikasi: str) -> int:
     conn.close()
     return count
 
-# INI BARU
 def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
-    """
-    Search peserta across all fields
-    Returns dict grouped by id_sertifikasi
-    """
     conn = get_connection()
     cursor = conn.cursor()
     
     search_pattern = f"%{search_text}%"
     
     if id_sertifikasi:
-        # Search within specific sertifikasi
         cursor.execute("""
             SELECT 
                 id_peserta, id_sertifikasi, skema,
@@ -269,7 +264,6 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
             ORDER BY nama ASC
         """, (id_sertifikasi, search_pattern, search_pattern, search_pattern, search_pattern, search_pattern))
     else:
-        # Search across all peserta
         cursor.execute("""
             SELECT 
                 id_peserta, id_sertifikasi, skema,
@@ -289,7 +283,6 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
     rows = cursor.fetchall()
     conn.close()
 
-    # Convert to PesertaModel grouped by id_sertifikasi
     grouped_results = {}
     for row in rows:
         peserta = PesertaModel(
@@ -310,14 +303,13 @@ def DB_Search_Peserta(search_text: str, id_sertifikasi: str = None):
             instansi=row[14]
         )
         
-        # Group by id_sertifikasi
         if peserta.id_sertifikasi not in grouped_results:
             grouped_results[peserta.id_sertifikasi] = []
         grouped_results[peserta.id_sertifikasi].append(peserta)
     
     if DEBUG:
         total = sum(len(v) for v in grouped_results.values())
-        print(f"[DB] Search found {total} peserta in {len(grouped_results)} sertifikasi")
+        logging.info(f"[DB] Search found {total} peserta in {len(grouped_results)} sertifikasi")
     
     return grouped_results
 
@@ -333,14 +325,14 @@ def DB_Delete_Peserta_By_Sertifikasi(id_sertifikasi):
         
         deleted = cursor.rowcount
         conn.commit()
-        
-        print(f"[INFO] Deleted {deleted} peserta from sertifikasi {id_sertifikasi}")
+        if DEBUG:
+            logging.info(f"[INFO] Deleted {deleted} peserta from sertifikasi {id_sertifikasi}")
         return deleted
         
     except Exception as e:
         conn.rollback()
-        print(f"[ERROR] Failed to delete peserta: {e}")
-        raise e
+        if DEBUG:
+            logging.error(f"[ERROR] Failed to delete peserta -> {e}")
     finally:
         conn.close()
         
@@ -355,7 +347,7 @@ def DB_Delete_Peserta(id_peserta: str):
     conn.close()
     
     if DEBUG and deleted:
-        print(f"[DB] Peserta deleted: ID Peserta {id_peserta}")
+        logging.info(f"[DB] Peserta deleted: ID Peserta {id_peserta}")
     
     return deleted
 
@@ -374,7 +366,7 @@ def DB_Delete_Peserta_Batch(id_peserta_list: list):
     conn.close()
     
     if DEBUG:
-        print(f"[DB] Batch deleted {deleted_count} peserta")
+        logging.info(f"[DB] Batch deleted {deleted_count} peserta")
     
     return deleted_count
 
@@ -429,7 +421,7 @@ def DB_Get_Peserta_By_Id(id_peserta: str):
         )
 
         if DEBUG:
-            print(f"[DB] Loaded peserta: {id_peserta}")
+            logging.info(f"[DB] Loaded peserta: {id_peserta}")
 
         return peserta
 
@@ -469,11 +461,10 @@ def DB_Save_Sertifikasi(id_sertifikasi: str, sertifikasi: str, tanggal: str):
         conn.commit()
         
         if DEBUG:
-            print(f"[DB] Sertifikasi saved: {id_sertifikasi} - {sertifikasi}")
+            logging.info(f"[DB] Sertifikasi saved: {id_sertifikasi} - {sertifikasi}")
 
     except Exception as e:
-        print("[DB ERROR SAVE SERTIFIKASI]", e)
-        raise
+        logging.error(f"[DB ERROR SAVE SERTIFIKASI] -> {e}")
 
     finally:
         conn.close()
@@ -507,7 +498,7 @@ def DB_Get_All_Sertifikasi():
         })
     
     if DEBUG:
-        print(f"[DB] Loaded {len(data_list)} sertifikasi")
+        logging.info(f"[DB] Loaded {len(data_list)} sertifikasi")
 
     return data_list
 
@@ -552,13 +543,12 @@ def DB_Update_Sertifikasi(id_sertifikasi: str, sertifikasi: str, tanggal_pelatih
         updated = cursor.rowcount > 0
         
         if DEBUG and updated:
-            print(f"[DB] Sertifikasi updated: {id_sertifikasi}")
+            logging.info(f"[DB] Sertifikasi updated: {id_sertifikasi}")
         
         return updated
 
     except Exception as e:
-        print("[DB ERROR UPDATE SERTIFIKASI]", e)
-        raise
+        logging.error(f"[DB ERROR UPDATE SERTIFIKASI] -> {e}")
 
     finally:
         conn.close()
@@ -578,25 +568,21 @@ def DB_Delete_Sertifikasi(id_sertifikasi: str, delete_peserta: bool = True):
         conn.commit()
         
         if DEBUG:
-            print(f"[DB] Sertifikasi deleted: {id_sertifikasi}")
+            logging.info(f"[DB] Sertifikasi deleted: {id_sertifikasi}")
             if delete_peserta:
-                print(f"[DB] Also deleted {peserta_deleted} peserta")
+                logging.info(f"[DB] Also deleted {peserta_deleted} peserta")
         
         return sertifikasi_deleted
         
     except Exception as e:
-        print("[DB ERROR DELETE SERTIFIKASI]", e)
+        if DEBUG:
+            logging.error(f"[DB ERROR DELETE SERTIFIKASI] -> {e}")
         conn.rollback()
-        raise
+
     finally:
         conn.close()
         
-# INI BARU
 def DB_Search_Sertifikasi(search_text: str):
-    """
-    Search sertifikasi by name
-    Returns list of sertifikasi matching the search
-    """
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -628,7 +614,7 @@ def DB_Search_Sertifikasi(search_text: str):
         })
     
     if DEBUG:
-        print(f"[DB] Search found {len(data_list)} sertifikasi")
+        logging.info(f"[DB] Search found {len(data_list)} sertifikasi")
     
     return data_list
 

@@ -1,6 +1,3 @@
-# =======================
-# FILE: pages/peserta.py
-# =======================
 import customtkinter as ctk
 from tkinter import messagebox
 from models.peserta_model import PesertaModel
@@ -105,7 +102,6 @@ class PesertaPage(ctk.CTkFrame):
             font=("Arial", 13)
         ).pack(side="left", padx=(0, 8))
 
-        # Container untuk search entry + clear button
         search_container = ctk.CTkFrame(search_frame, fg_color="transparent")
         search_container.pack(side="left")
 
@@ -119,7 +115,6 @@ class PesertaPage(ctk.CTkFrame):
         self.search_entry.bind("<Return>", lambda e: self.apply_search())
         self.search_entry.bind("<KeyRelease>", lambda e: self.update_clear_button_visibility())
 
-        # Clear button (inside search entry - hidden by default)
         self.clear_search_btn = ctk.CTkButton(
             search_container,
             text="✕",
@@ -131,11 +126,9 @@ class PesertaPage(ctk.CTkFrame):
             font=("Arial", 16, "bold"),
             command=self.clear_search
         )
-        # Position it inside the entry field on the right
         self.clear_search_btn.place(in_=self.search_entry, relx=0.92, rely=0.5, anchor="e")
-        self.clear_search_btn.place_forget()  # Hide initially
+        self.clear_search_btn.place_forget()  
 
-        # Search button
         search_btn = ctk.CTkButton(
             search_frame,
             text="🔍",
@@ -230,65 +223,49 @@ class PesertaPage(ctk.CTkFrame):
         self.refresh_display()
    
     def refresh_display(self):
-        """Refresh display dengan data sertifikasi"""
-        # Clear existing
         for widget in self.scroll_container.winfo_children():
             widget.destroy()
         
-        # Determine display data - PERBAIKAN DI SINI
         if self.search_text:
-            # Ada search active, pakai filtered results
             display_data = self.filtered_sertifikasi if self.filtered_sertifikasi is not None else []
         elif self.date_filter != "Semua":
-            # Ada date filter, pakai filtered results
             display_data = self.filtered_sertifikasi if self.filtered_sertifikasi else []
         else:
-            # Default: tampilkan semua
             display_data = self.all_sertifikasi
         
-        # Update info
         total_sertifikasi = len(display_data)
         total_peserta = sum(s['jumlah_peserta'] for s in display_data)
         
-        # Update info label based on state
         if self.search_text and display_data:
-            # Search found results
             self.info_label.configure(
                 text=f"🔍 {total_sertifikasi} Sertifikasi | {total_peserta} Peserta | '{self.search_text}'"
             )
         elif self.date_filter != "Semua" and display_data:
-            # Date filter with results
             self.info_label.configure(
                 text=f"📊 {total_sertifikasi} Sertifikasi | {total_peserta} Peserta | 📅 {self.date_filter}"
             )
         elif not display_data and (self.search_text or self.date_filter != "Semua"):
-            # No results (handled in show_empty_state)
-            pass  # Info label sudah diupdate di apply_search atau apply_date_filter
+            pass  
         else:
-            # Default state
             self.info_label.configure(
                 text=f"📊 {total_sertifikasi} Sertifikasi | {total_peserta} Total Peserta"
             )
         
-        # Show content or empty state
         if not display_data:
             self.show_empty_state()
             return
         
-        # Create sertifikasi sections
         for sertif in display_data:
             self.create_sertifikasi_section(sertif)
     
     def show_empty_state(self):
-        """Show empty state with different messages"""
         empty_frame = ctk.CTkFrame(
             self.scroll_container,
             fg_color="#1f1f1f",
-            height=250  # Tambah tinggi untuk button
+            height=250  
         )
         empty_frame.pack(fill="x", pady=50)
         
-        # Determine message based on state
         if self.search_text:
             icon = "🔍"
             message = f"Tidak ditemukan hasil untuk '{self.search_text}'"
@@ -308,14 +285,12 @@ class PesertaPage(ctk.CTkFrame):
             color = "#666666"
             show_reset = False
         
-        # Icon
         ctk.CTkLabel(
             empty_frame,
             text=icon,
             font=("Arial", 48)
         ).pack(pady=(40, 10))
         
-        # Main message
         ctk.CTkLabel(
             empty_frame,
             text=message,
@@ -323,7 +298,6 @@ class PesertaPage(ctk.CTkFrame):
             text_color=color
         ).pack(pady=(0, 5))
         
-        # Submessage
         ctk.CTkLabel(
             empty_frame,
             text=submessage,
@@ -331,7 +305,6 @@ class PesertaPage(ctk.CTkFrame):
             text_color="#999999"
         ).pack(pady=(0, 20))
         
-        # Reset button (only for search/filter)
         if show_reset:
             reset_btn = ctk.CTkButton(
                 empty_frame,
@@ -346,21 +319,16 @@ class PesertaPage(ctk.CTkFrame):
             reset_btn.pack(pady=(0, 40))
         
     def reset_all_filters(self):
-        """Reset semua filter (search dan date)"""
-        # Clear search
         self.search_entry.delete(0, 'end')
         self.search_text = ""
         self.clear_search_btn.pack_forget()
         
-        # Reset date filter
         self.date_filter = "Semua"
         self.date_combo.set("Semua")
         
-        # Clear cache
         self.filtered_sertifikasi = []
         self.peserta_cache.clear()
         
-        # Refresh display
         self.refresh_display()
         
     def create_sertifikasi_section(self, sertif):
@@ -757,15 +725,11 @@ class PesertaPage(ctk.CTkFrame):
             except Exception as e:
                 messagebox.showerror("Error", f"Gagal menghapus data: {str(e)}")
     
-    # INI BARU
     def apply_search(self):
-        """Apply search filter"""
         search_text = self.search_entry.get().strip()
         
-        # Update clear button visibility
         self.update_clear_button_visibility()
         
-        # Clear search - jika input kosong
         if not search_text:
             self.search_text = ""
             self.filtered_sertifikasi = []
@@ -774,70 +738,51 @@ class PesertaPage(ctk.CTkFrame):
             self.refresh_display()
             return
         
-        # Already searching same text - skip
         if search_text == self.search_text:
             return
         
-        # Update search text
         self.search_text = search_text
         
-        # Show loading indicator
         self.info_label.configure(text="🔍 Mencari...")
         self.update_idletasks()
         
         try:
-            # Search sertifikasi by name
             filtered_sertifikasi = DB_Search_Sertifikasi(self.search_text)
-            
-            # Search peserta and group by sertifikasi
             peserta_results = DB_Search_Peserta(self.search_text)
-            
-            # Combine results
             combined_sertifikasi_ids = set()
             
-            # Add sertifikasi that match by name
             for sertif in filtered_sertifikasi:
                 combined_sertifikasi_ids.add(sertif['id_sertifikasi'])
             
-            # Add sertifikasi that have matching peserta
             for id_sertifikasi in peserta_results.keys():
                 combined_sertifikasi_ids.add(id_sertifikasi)
             
-            # Get full sertifikasi data for all matches
             if combined_sertifikasi_ids:
-                # Apply date filter if active
                 if self.date_filter == "Semua":
                     base_data = self.all_sertifikasi
                 else:
                     base_data = [s for s in self.all_sertifikasi if s['tanggal_pelatihan'] == self.date_filter]
                 
-                # Filter to only matching sertifikasi
                 self.filtered_sertifikasi = [
                     s for s in base_data 
                     if s['id_sertifikasi'] in combined_sertifikasi_ids
                 ]
                 
-                # Cache filtered peserta results
                 for id_sertifikasi, peserta_list in peserta_results.items():
                     self.peserta_cache[id_sertifikasi] = peserta_list
                 
-                # Refresh display
                 self.refresh_display()
                 
-                # Update info label - HASIL DITEMUKAN
                 total_peserta = sum(len(peserta_results.get(s['id_sertifikasi'], [])) for s in self.filtered_sertifikasi)
                 self.info_label.configure(
                     text=f"🔍 {len(self.filtered_sertifikasi)} Sertifikasi | {total_peserta} Peserta | '{self.search_text}'"
                 )
             else:
-                # No results found - SET FILTERED KE EMPTY LIST
                 self.filtered_sertifikasi = []
                 self.peserta_cache.clear()
                 
-                # Refresh display - INI AKAN TRIGGER show_empty_state
                 self.refresh_display()
                 
-                # Update info label - TIDAK DITEMUKAN
                 self.info_label.configure(
                     text=f"🔍 '{self.search_text}' - Tidak ada hasil"
                 )
@@ -846,14 +791,11 @@ class PesertaPage(ctk.CTkFrame):
             messagebox.showerror("Error", f"Gagal mencari: {str(e)}")
             self.info_label.configure(text="❌ Error saat mencari")
    
-    # INI BARU 
     def clear_search(self):
-        """Clear search and reset display"""
         self.search_entry.delete(0, 'end')
         self.search_text = ""
         self.after(10, lambda: self.header_frame.focus_set())
         
-        # Hide clear button
         self.clear_search_btn.place_forget()        
         
         self.filtered_sertifikasi = []
@@ -862,12 +804,9 @@ class PesertaPage(ctk.CTkFrame):
         self.refresh_display()
     
     def update_clear_button_visibility(self):
-        """Show/hide clear button based on search entry content"""
         if self.search_entry.get().strip():
-            # Show clear button
             self.clear_search_btn.place(in_=self.search_entry, relx=0.86, rely=0.5, anchor="w")
         else:
-            # Hide clear button
             self.clear_search_btn.place_forget()
             
     def refresh_all(self):

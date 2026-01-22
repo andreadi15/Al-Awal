@@ -1,11 +1,8 @@
-# =======================
-# FILE: services/excel_template_exporter.py
-# =======================
 from openpyxl import load_workbook
 from openpyxl.styles import Border, Side, Font, Alignment, PatternFill
 from config import DEBUG
 from copy import copy
-import re
+import re, logging
 
 class export_Excel:
     def __init__(self, template_path):
@@ -24,10 +21,10 @@ class export_Excel:
             
             if not self.template_row_index:
                 if DEBUG:
-                    print("[ERROR] Template row tidak ditemukan! Pastikan ada placeholder {{key}}")
+                    logging.error("[ERROR] Template row tidak ditemukan! Pastikan ada placeholder {{key}}")
                 return False
             if DEBUG:
-                print(f"[INFO] Template row ditemukan di baris: {self.template_row_index}")
+                logging.info(f"[INFO] Template row ditemukan di baris: {self.template_row_index}")
             
             template_styles = self._save_row_styles(self.template_row_index)
             template_values = self._save_row_values(self.template_row_index)
@@ -56,13 +53,13 @@ class export_Excel:
             wb.Close(False)
             excel.Quit()
             if DEBUG:
-                print(f"[SUCCESS] File berhasil disimpan: {output_path}")
-                print(f"[INFO] Total data: {len(data_list)} baris")
+                logging.info(f"[SUCCESS] File berhasil disimpan: {output_path}")
+                logging.info(f"[INFO] Total data: {len(data_list)} baris")
             return True
             
         except Exception as e:
             if DEBUG:
-                print(f"[ERROR] Export gagal: {str(e)}")
+                logging.error(f"[ERROR] Export gagal: {str(e)}")
             import traceback
             traceback.print_exc()
             return False

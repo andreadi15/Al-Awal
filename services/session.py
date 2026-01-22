@@ -1,10 +1,6 @@
-# =======================
-# FILE: services/session.py
-# =======================
 
-class SessionManager:
-    """Manage temporary form state across pages"""
-    
+
+class SessionManager:   
     _instance = None
     _data = {}
     
@@ -32,5 +28,4 @@ class SessionManager:
         """Check if key exists"""
         return key in self._data
 
-# Singleton instance
 session = SessionManager()

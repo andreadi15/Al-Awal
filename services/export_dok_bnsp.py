@@ -1,5 +1,5 @@
 import os, logging
-from config import BASE_DIR, TEMPLATE_BASE, TEMPLATE_DOK_BNSP
+from config import DEBUG, BASE_DIR, TEMPLATE_BASE, TEMPLATE_DOK_BNSP
 from models.peserta_model import PesertaModel
 from services.logic import format_kabupaten, format_tanggal_to_general
 
@@ -38,14 +38,13 @@ class DokBNSPSingleProcessor:
         ttd_path, 
         output_folder, 
         callback_single):
-        """
-        Proses single peserta
-        """
+        
         templates = TEMPLATE_DOK_BNSP.get(peserta.skema)
         if not templates:
             if callback_single:
                 callback_single(peserta.id_peserta, "error", None)
-            logging.warning(f"Template Tidak Tersedia! -> {peserta.skema}")
+            if DEBUG:
+                logging.warning(f"Template Tidak Tersedia! -> {peserta.skema}")
             return False
 
         template_paths = [
@@ -82,14 +81,14 @@ class DokBNSPSingleProcessor:
                 adjusted_progress_callback):
                 if callback_single:
                     callback_single(peserta.id_peserta, "error", None)
-                logging.warning("Generated Dokument Gagal")
+                if DEBUG:
+                    logging.error("Generated Dokument Gagal")
                 return False
             
         if callback_single:
             callback_single(peserta.id_peserta, "completed", None)
         return True
 
-    # === Word generation (dipindah utuh dari class lama) ===
     def _generate_document(self, id_peserta, row_data, template_path, output_folder, callback_progress):
         import pandas as pd
         import win32com.client as win32
@@ -176,7 +175,8 @@ class DokBNSPSingleProcessor:
                             shape.Height = h * ratio 
                     except Exception as e:
                         doc.Close(SaveChanges=False)  
-                        logging.warning(f"[Error] TTD Replacement Area -> {e}")
+                        if DEBUG:
+                            logging.error(f"[Error] TTD Replacement Area -> {e}")
                         return False
                 else:
                     find.Text = placeholder
@@ -190,7 +190,7 @@ class DokBNSPSingleProcessor:
                         MatchSoundsLike=False,
                         MatchAllWordForms=False,
                         Forward=True,
-                        Wrap=1,  # wdFindContinue
+                        Wrap=1,  
                         Format=False,
                         ReplaceWith=replacement,
                         Replace=wdReplaceAll
@@ -212,7 +212,8 @@ class DokBNSPSingleProcessor:
             return True
 
         except Exception as e:
-            logging.warning(f"Gagal generate dokumen -> {e}")
+            if DEBUG:
+                logging.error(f"Gagal generate dokumen -> {e}")
             return False
 
         finally:
@@ -220,8 +221,6 @@ class DokBNSPSingleProcessor:
                 doc.Close(SaveChanges=False)
                 
     def cleanup(self):
-        """Force cleanup all resources"""
-        # Close current document
         if self.current_doc:
             try:
                 self.current_doc.Close(SaveChanges=False)
@@ -229,7 +228,6 @@ class DokBNSPSingleProcessor:
                 pass
             self.current_doc = None
         
-        # Quit Word
         if self.word:
             try:
                 self.word.Quit()
@@ -251,7 +249,6 @@ class DokBNSPBatchProcessor:
         callback_single,
         callback_global
     ):
-        # total = len(peserta_list)
         for index, peserta in enumerate(peserta_list, start=1):
             peserta: PesertaModel
             try:
@@ -263,24 +260,15 @@ class DokBNSPBatchProcessor:
                     output_folder,
                     callback_single,
                 )
-                # if result:
-                #     if callback_global:
-                #         percent = (index / total)
-                #         callback_global('running', percent)
-                #         continue
+
                 if not result:
                     if callback_global:
                         callback_global('error')
                     return
 
             except Exception as e:
-                logging.warning(f"[Error] Batch Processor -> {e}")
-                
-                # if callback_single:
-                #     callback_single(peserta.id_peserta, "error", None)
-
-                # if callback_global:
-                #     callback_global('error', None)
+                if DEBUG:
+                    logging.error(f"[Error] Batch Processor -> {e}")
                 return 
             
         if callback_global:

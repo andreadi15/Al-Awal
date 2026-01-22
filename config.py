@@ -12,7 +12,7 @@ else:
 
 BASE_DIR = os.getcwd()
 DB_PATH = "database/data.db"
-DEBUG = True
+DEBUG = False
 EMAIL = CONFIG['general']['email']
 NAMA_PERUSAHAAN = CONFIG['general']['nama_perusahaan']
 LOKASI_PERUSAHAAN = CONFIG['general']['lokasi_perusahaan']

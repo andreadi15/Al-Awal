@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from tkinter import messagebox
-import re, uuid
+import re, uuid, logging
 from models.peserta_model import PesertaModel
 from services.session import session
 from services.database import (
@@ -10,7 +10,7 @@ from services.database import (
     DB_Get_Peserta_By_Sertifikasi,
     DB_Delete_Peserta_By_Sertifikasi)
 from components import peserta_validator,create_entry,form_row,nik_entry
-from config import PENDIDIKAN_OPTIONS,TEMPLATE_DOK_BNSP
+from config import DEBUG, PENDIDIKAN_OPTIONS,TEMPLATE_DOK_BNSP
 
 class InputPesertaPage(ctk.CTkFrame):
     def __init__(self, parent, id_sertifikasi=None):
@@ -42,14 +42,11 @@ class InputPesertaPage(ctk.CTkFrame):
         else:
             self._update_selected_id()
         
-        # Check if we should restore state or load from DB
         has_saved_state = session.has('input_peserta_state')
         
         if has_saved_state:
-            # Restore from session
             self.restore_state()
         elif self.selected_id_sertifikasi:
-            # Load from database
             self.load_peserta_from_sertifikasi()
         
         self.refresh_UI_Form()
@@ -116,7 +113,7 @@ class InputPesertaPage(ctk.CTkFrame):
         )
         self.data_scroll_frame.pack(fill="x", pady=(0, 15))
         
-        for i in range(10):  # 10 kolom
+        for i in range(10):  
             self.data_scroll_frame.grid_columnconfigure(i, weight=1, minsize=100)
             
     # =======================
@@ -127,19 +124,15 @@ class InputPesertaPage(ctk.CTkFrame):
         self.form_frame.pack(fill="both", expand=True, padx=50)
         self.form_frame.bind("<Button-1>", lambda e: self.form_frame.focus_set())
 
-        
-        # Form content dengan padding
         form_content = ctk.CTkFrame(self.form_frame, fg_color="transparent")
         form_content.pack(fill="both", expand=True, padx=40, pady=40)
         form_content.bind("<Button-1>", lambda e: form_content.focus_set())
 
-        # Header row dengan Sertifikasi dan Counter
         header_row = ctk.CTkFrame(form_content, fg_color="transparent")
         header_row.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 20))
         header_row.grid_columnconfigure(1, weight=1)
         header_row.bind("<Button-1>", lambda e: header_row.focus_set())
 
-        # Sertifikasi combo box (kiri)
         sertifikasi_label = ctk.CTkLabel(header_row, text="Sertifikasi:", font=("Arial", 14, "bold"), text_color="#ffffff")
         sertifikasi_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
         sertifikasi_label.bind("<Button-1>", lambda e: sertifikasi_label.focus_set())
@@ -151,20 +144,16 @@ class InputPesertaPage(ctk.CTkFrame):
         self.entries["sertifikasi"].grid(row=0, column=1, sticky="w")
         self.entries["sertifikasi"].configure(state="readonly")
         
-        # Set combo box berdasarkan id_sertifikasi yang dikirim
         if sertifikasi_options:
             if self.selected_id_sertifikasi:
-                # Cari display text yang sesuai dengan ID
                 self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
             else:
-                # Default ke option pertama
                 self.entries["sertifikasi"].set(sertifikasi_options[0])
                 self._update_selected_id()
                 
         self.entries["sertifikasi"].configure(command=self._on_sertifikasi_change)
         self.entries["sertifikasi"].bind("<Button-1>", lambda e: self.entries["sertifikasi"].focus_set())
 
-        # Counter peserta (kanan)
         self.counter_label = ctk.CTkLabel(
             header_row,
             text="Peserta #1",
@@ -178,7 +167,6 @@ class InputPesertaPage(ctk.CTkFrame):
         self.counter_label.grid(row=0, column=2, sticky="e")
         self.counter_label.bind("<Button-1>", lambda e: self.counter_label.focus_set())
 
-        # Row tracking
         current_row = 1
         
         # 1. Skema (ComboBox)
@@ -336,7 +324,6 @@ class InputPesertaPage(ctk.CTkFrame):
     # LOGIC
     # =======================
     def _set_sertifikasi_by_id(self, id_sertifikasi):
-        """Set combo box berdasarkan ID yang dikirim"""
         for display_text, sert_id in self.sertifikasi_map.items():
             if sert_id == id_sertifikasi:
                 self.entries["sertifikasi"].set(display_text)
@@ -361,11 +348,12 @@ class InputPesertaPage(ctk.CTkFrame):
                 self.clear_form()
             
             self.save_state()
-                
-            print(f"[INFO] Loaded {len(self.list_peserta)} peserta from database")
+            if DEBUG:
+                logging.info(f"[INFO] Loaded {len(self.list_peserta)} peserta from database")
             
         except Exception as e:
-            print(f"[ERROR] Failed to load peserta: {e}")
+            if DEBUG:
+                logging.error(f"[ERROR] Failed to load peserta: {e}")
             self.list_peserta = []
             self.current_index = 0
             
@@ -447,25 +435,17 @@ class InputPesertaPage(ctk.CTkFrame):
         return messagebox.askyesno("Konfirmasi Perubahan", message)
 
     def _generate_sertifikasi_options(self):
-        """Generate options untuk combo box dengan format: 'Sertifikasi Tanggal'"""
         options = []
         self.sertifikasi_map = {}
         
         for sert in self.sertifikasi:
-            # Truncate nama sertifikasi jika lebih dari 20 karakter
             nama = sert["sertifikasi"]
             if len(nama) > 20:
                 nama = nama[:17] + "..."
             
-            # Format tanggal
             tanggal = sert["tanggal_pelatihan"]
-            
-            # Gabungkan jadi display text
             display_text = f"{nama} - {tanggal}"
-            
-            # Simpan mapping display_text -> id_sertifikasi
             self.sertifikasi_map[display_text] = sert["id_sertifikasi"]
-            
             options.append(display_text)
         
         return options
@@ -504,7 +484,6 @@ class InputPesertaPage(ctk.CTkFrame):
                     
                     self.simpan_peserta(self.list_peserta)
                     
-                    # ✅ CLEAR session setelah save
                     self.clear_saved_state()
                     
                     messagebox.showinfo(
@@ -512,25 +491,25 @@ class InputPesertaPage(ctk.CTkFrame):
                         f"Berhasil menyimpan perubahan!"
                     )
                 else:
-                    # ✅ CLEAR session jika tidak ada perubahan
                     self.clear_saved_state()
                 
             except Exception as e:
-                print(f"Gagal memproses data: {str(e)}")
+                if DEBUG:
+                    logging.error(f"Gagal memproses data: {str(e)}")
                 self._set_sertifikasi_by_id(self.selected_id_sertifikasi)
                 return
         else:
-            # ✅ CLEAR session jika list kosong (tidak ada unsaved data)
             self.clear_saved_state()
         
         self._update_selected_id()
-        self.load_peserta_from_sertifikasi()  # Ini akan auto-save ke session
+        self.load_peserta_from_sertifikasi()  
         self.refresh_UI_Form()
     
     def _update_selected_id(self):
         current_text = self.entries["sertifikasi"].get()
         self.selected_id_sertifikasi = self.sertifikasi_map.get(current_text, "")
-        print(f"[DEBUG] Selected ID: {self.selected_id_sertifikasi}")
+        if DEBUG:
+            logging.info(f"[DEBUG] Selected ID: {self.selected_id_sertifikasi}")
         
     def format_tanggal_input(self, event):  
         if event.keysym == "Tab":
@@ -645,7 +624,8 @@ class InputPesertaPage(ctk.CTkFrame):
             canvas.yview_moveto(scroll_position)
             
         except Exception as e:
-            print(f"Scroll error: {e}")
+            if DEBUG:
+                logging.error(f"Scroll error: {e}")
             pass
 
     def collect_form(self):
@@ -1043,20 +1023,17 @@ class InputPesertaPage(ctk.CTkFrame):
             DB_Delete_Peserta_By_Sertifikasi(self.selected_id_sertifikasi)
             
             for i, peserta in enumerate(list_peserta, start=1):
-                print(f"{i}. Saving Data {peserta.nama}")
+                if DEBUG:
+                    logging.info(f"{i}. Saving Data {peserta.nama}")
                 DB_Save_Peserta(peserta, self.selected_id_sertifikasi)
             
         except Exception as e:
             messagebox.showerror("Err",f"[ERROR] Gagal menyimpan peserta: {e}")
-            raise e
+            if DEBUG:
+                logging.error(f"[ERROR] Gagal Menyimpan Peserta -> {e}")
         
     def save_state(self):
-        """
-        Save current form state to session before leaving page
-        Dipanggil otomatis saat pindah page
-        """
         try:
-            # Collect current form data (tanpa validasi)
             current_form_data = {
                 'skema': self.entries["skema"].get(),
                 'nama': self.entries["nama"].get(),
@@ -1073,7 +1050,6 @@ class InputPesertaPage(ctk.CTkFrame):
                 'instansi': self.entries["instansi"].get(),
             }
             
-            # Save state (SET akan otomatis overwrite session lama)
             state = {
                 'id_sertifikasi': self.selected_id_sertifikasi,
                 'current_index': self.current_index,
@@ -1083,64 +1059,56 @@ class InputPesertaPage(ctk.CTkFrame):
             }
             
             session.set('input_peserta_state', state)
-            print(f"[INPUT] ✅ State saved: {len(self.list_peserta)} peserta, index: {self.current_index}, sertifikasi: {self.selected_id_sertifikasi}")
+            if DEBUG:
+                logging.info(f"[INPUT] State saved: {len(self.list_peserta)} peserta, index: {self.current_index}, sertifikasi: {self.selected_id_sertifikasi}")
             
         except Exception as e:
-            print(f"[INPUT] ❌ Error saving state: {e}")
-            import traceback
-            traceback.print_exc()
+            if DEBUG:
+                logging.error(f"[INPUT] Error saving state: {e}")
 
     def restore_state(self):
-        """
-        Restore form state from session when returning to page
-        Dipanggil otomatis saat page di-load
-        """
         state = session.get('input_peserta_state')
         
         if not state:
-            print("[INPUT] No saved state found")
+            if DEBUG:
+                logging.info("[INPUT] No saved state found")
             return
         
         try:
-            # Restore sertifikasi selection
             saved_id = state.get('id_sertifikasi')
             if saved_id and saved_id == self.selected_id_sertifikasi:
-                # Restore list peserta
                 saved_peserta_list = state.get('list_peserta', [])
                 if saved_peserta_list:
                     self.list_peserta = [PesertaModel.from_dict(p) for p in saved_peserta_list]
-                    print(f"[INPUT] Restored {len(self.list_peserta)} peserta from session")
+                    if DEBUG:
+                        logging.info(f"[INPUT] Restored {len(self.list_peserta)} peserta from session")
                 
-                # Restore current index
                 self.current_index = state.get('current_index', 0)
                 
-                # Restore current form data
                 current_form =  PesertaModel.from_dict(state.get('current_form_data', {}))
                 if current_form:
                     self.load_form(current_form)
-                    print(f"[INPUT] Restored form data at index {self.current_index}")
+                    if DEBUG:
+                        logging.info(f"[INPUT] Restored form data at index {self.current_index}")
                 
-                # Refresh UI
                 self.refresh_UI_Form()
                 
-                # Restore scroll position
                 scroll_pos = state.get('scroll_position', 0)
                 if scroll_pos:
                     self.after(100, lambda: self.main_container._parent_canvas.yview_moveto(scroll_pos))
                 
-                print(f"[INPUT] State fully restored")
+                if DEBUG:
+                    logging.info(f"[INPUT] State fully restored")
             else:
-                print(f"[INPUT] Sertifikasi ID mismatch, clearing state")
+                if DEBUG:
+                    logging.info(f"[INPUT] Sertifikasi ID mismatch, clearing state")
                 session.clear('input_peserta_state')
                 
         except Exception as e:
-            print(f"[INPUT] Error restoring state: {e}")
-            import traceback
-            traceback.print_exc()
+            if DEBUG:
+                logging.error(f"[INPUT] Error restoring state: {e}")
 
     def clear_saved_state(self):
-        """
-        Clear saved state - dipanggil setelah save sukses
-        """
         session.clear('input_peserta_state')
-        print("[INPUT] Saved state cleared")        
+        if DEBUG:
+            logging.info("[INPUT] Saved state cleared")        

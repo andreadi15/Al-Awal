@@ -29,7 +29,6 @@ class App(ctk.CTk):
         self.nav_visible = True
         self.current_page = None
 
-        # Konfigurasi grid
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=0, minsize=self.NAV_WIDTH)
         self.grid_columnconfigure(1, weight=1)
@@ -38,7 +37,6 @@ class App(ctk.CTk):
         self.create_content_container()
         self.create_toggle_button()
         
-        # Load halaman default
         self.show_page("Dashboard")
 
     def create_nav(self):
@@ -47,7 +45,6 @@ class App(ctk.CTk):
         self.nav.grid_propagate(False)
         self.nav.grid_rowconfigure(1, weight=1)
 
-        # Header
         header = ctk.CTkFrame(
             self.nav, 
             fg_color="transparent", 
@@ -63,7 +60,6 @@ class App(ctk.CTk):
         )
         title.pack(side="left", padx=15, pady=self.BTN_MARGIN)
 
-        # Menu items container
         menu_frame = ctk.CTkFrame(self.nav, fg_color="transparent")
         menu_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
@@ -83,20 +79,12 @@ class App(ctk.CTk):
             self.menu_buttons[item] = btn_widget
 
     def create_menu_button(self, parent, icon, text):
-        """
-        Menu button dengan proper sizing:
-        - Container 80% dari NAV_WIDTH
-        - Button full width tanpa padding
-        """
-        # Hitung 80% dari nav width untuk container
         container_width = int(self.NAV_WIDTH * 0.8)
         
-        # Container dengan fixed width 80%
         container = ctk.CTkFrame(parent, fg_color="#333333", width=container_width, height=50)
-        container.pack(pady=3, anchor="w")  # anchor="w" biar rata kiri
-        container.pack_propagate(False)  # PENTING: jaga fixed width
+        container.pack(pady=3, anchor="w")  
+        container.pack_propagate(False)  
         
-        # Button TANPA padx - langsung full!
         btn = ctk.CTkButton(
             container,
             text=f"{icon}  {text}",
@@ -108,13 +96,11 @@ class App(ctk.CTk):
             font=("Arial", 15),
             command=lambda: self.show_page(text)
         )
-        btn.pack(fill="both", expand=True)  # TANPA padx!
+        btn.pack(fill="both", expand=True) 
         
-        # Store state
         btn._page_name = text
         btn._is_hovered = False
         
-        # Hover events
         def on_enter(e):
             btn._is_hovered = True
             btn.configure(fg_color="#B8B8B8", text_color="#333333")
@@ -124,14 +110,12 @@ class App(ctk.CTk):
             if self.current_page != text:
                 btn.configure(fg_color="#333333",text_color="#ffffff")
         
-        # Bind hover
         btn.bind("<Enter>", on_enter)
         btn.bind("<Leave>", on_leave)
         
         return btn
 
     def create_content_container(self):
-        """Container untuk content yang bisa diganti-ganti"""
         self.content_container = ctk.CTkFrame(self, fg_color="#2a2a2a")
         self.content_container.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
 
@@ -139,9 +123,7 @@ class App(ctk.CTk):
         """
         Ganti halaman yang ditampilkan dengan auto-save state
         """
-        # Save current page state before switching
         if self.current_page:
-            # Get current page widget
             for widget in self.content_container.winfo_children():
                 if hasattr(widget, 'save_state'):
                     try:
@@ -151,18 +133,14 @@ class App(ctk.CTk):
                         print(f"[APP] Error saving state: {e}")
                 break
         
-        # Destroy current page
         if self.current_page:
             for widget in self.content_container.winfo_children():
                 widget.destroy()
         
-        # Update menu highlights - reset semua button dulu
         for name, btn in self.menu_buttons.items():
             if name == page_name:
-                # Button yang diklik: tetap di hover color
                 btn.configure(fg_color="#B8B8B8", text_color="#333333")
             else:
-                # Button lain: kembalikan ke transparent
                 if not getattr(btn, '_is_hovered', False):
                     btn.configure(fg_color="transparent", text_color="#ffffff")
         
@@ -175,8 +153,6 @@ class App(ctk.CTk):
             page = InputPesertaPage(self.content_container, id_sertifikasi)
         elif page_name == "PDF2Image": 
             page = Pdf2ImagePage(self.content_container)
-            if hasattr(page, 'restore_state'):
-                page.restore_state()
         elif page_name == "Projects":
             page = ProjectsPage(self.content_container)
         elif page_name == "Settings":
@@ -188,7 +164,6 @@ class App(ctk.CTk):
         self.current_page = page_name
 
     def create_toggle_button(self):
-        """Buat tombol toggle"""
         self.toggle_btn = ctk.CTkButton(
             self,
             text="✕",
@@ -207,7 +182,6 @@ class App(ctk.CTk):
         self.update_toggle_position()
 
     def update_toggle_position(self):
-        """Update posisi dan icon tombol"""
         if self.nav_visible:
             x = self.NAV_WIDTH - self.TOGGLE_BTN_SIZE - 15
             y = self.BTN_MARGIN
@@ -221,7 +195,6 @@ class App(ctk.CTk):
         self.toggle_btn.place(x=x, y=y)
 
     def toggle_nav(self):
-        """Toggle nav dengan manipulasi width only"""
         if self.nav_visible:
             target_width = 0
             target_minsize = 0
