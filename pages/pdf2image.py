@@ -1,7 +1,3 @@
-# =======================
-# FILE: pages/pdf2image.py
-# =======================
-
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import os, logging

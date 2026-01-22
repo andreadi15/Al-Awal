@@ -98,7 +98,6 @@ class PdfProcessor:
             logging.error(f"[ERROR] [Single PDF Process] -> {str(e)}")
             return False
         
-# ptocess PDF Batch
 class PdfBatchProcessor:
     def __init__(self):
         self.processor = PdfProcessor()
