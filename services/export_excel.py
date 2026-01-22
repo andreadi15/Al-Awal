@@ -12,7 +12,6 @@ class export_Excel:
         self.template_row_index = None
         self.placeholder_pattern = re.compile(r'\{\{(\w+)\}\}')
     
-    # ptocess Export
     def export(self, data_list, output_path, sheet_name=None):
         try:
             self.wb = load_workbook(self.template_path)
