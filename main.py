@@ -219,13 +219,3 @@ if __name__ == "__main__":
     app = App()
     app.mainloop()
     
-    
-    
-    
-    
-    
-    
-    
-    
-# diclaude tambahin update ketika user input 1 peserta maka tombolnya simpan hanya "Simpan",tapi ketika klik tombol selanjutnya maka tombol simpan ganti textnya dengan "Simpan Semua",dan ketika tombol selanjutnya ditekan dan data terakhir tidak diisi dengan lengkap maka 
-# udahlah bikin aja sebuah kolom khusus untuk menyimpan data ketika tombol selanjutnyaditekan maka create data dikolom itu gitu
